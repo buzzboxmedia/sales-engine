@@ -10,7 +10,7 @@ export const sequelize = new Sequelize(databaseUrl, {
   dialect: 'postgres',
   logging: false,
   dialectOptions: {
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: { rejectUnauthorized: false },
   },
   schema: 'sales_engine',
 });

@@ -168,11 +168,10 @@ async function importInstantlyReplies(): Promise<number> {
     const fromEmail = reply.from_address_email?.toLowerCase()?.trim();
     if (!fromEmail) continue;
 
-    // Find the contact
-    const contact = await Contact.findOne({ where: { email: fromEmail, project: 'talkspresso' } });
+    // Find or create the contact
+    let contact = await Contact.findOne({ where: { email: fromEmail, project: 'talkspresso' } });
     if (!contact) {
-      // Create contact from reply
-      await Contact.create({
+      contact = await Contact.create({
         email: fromEmail,
         source: 'instantly',
         status: 'replied',
