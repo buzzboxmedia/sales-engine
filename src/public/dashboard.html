@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e4e4e7; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .header h1 { font-size: 20px; font-weight: 600; color: #fff; }
+    .header .meta { font-size: 13px; color: #71717a; }
+    .auth-bar { background: #1c1c22; border: 1px solid #27272a; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; display: flex; gap: 8px; align-items: center; }
+    .auth-bar input { flex: 1; background: #0f1117; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 12px; color: #e4e4e7; font-size: 14px; }
+    .auth-bar button { background: #3b82f6; border: none; border-radius: 6px; padding: 8px 16px; color: #fff; font-size: 14px; cursor: pointer; }
+    .auth-bar button:hover { background: #2563eb; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .card { background: #1c1c22; border: 1px solid #27272a; border-radius: 8px; padding: 16px; }
+    .card .label { font-size: 12px; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .card .value { font-size: 28px; font-weight: 700; color: #fff; }
+    .card .sub { font-size: 12px; color: #71717a; margin-top: 2px; }
+    .section { background: #1c1c22; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    .section h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #a1a1aa; }
+    .funnel { display: flex; gap: 4px; align-items: end; height: 120px; margin-bottom: 8px; }
+    .funnel-bar { flex: 1; background: #3b82f6; border-radius: 4px 4px 0 0; min-height: 4px; position: relative; transition: height 0.3s; }
+    .funnel-bar .tip { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; }
+    .funnel-labels { display: flex; gap: 4px; }
+    .funnel-labels span { flex: 1; text-align: center; font-size: 11px; color: #71717a; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; border-bottom: 1px solid #27272a; }
+    td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #1e1e24; }
+    .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+    .status-sent { background: #1e3a5f; color: #60a5fa; }
+    .status-replied { background: #1a3a1a; color: #4ade80; }
+    .status-bounced { background: #3a1a1a; color: #f87171; }
+    .status-queued { background: #2a2a1a; color: #fbbf24; }
+    .status-interested { background: #1a3a1a; color: #4ade80; }
+    .status-not_interested { background: #3a1a1a; color: #f87171; }
+    .status-auto_reply { background: #2a2a2a; color: #a1a1aa; }
+    .search-box { display: flex; gap: 8px; margin-bottom: 16px; }
+    .search-box input { flex: 1; background: #0f1117; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 12px; color: #e4e4e7; font-size: 14px; }
+    .search-box button { background: #27272a; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 16px; color: #e4e4e7; font-size: 14px; cursor: pointer; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+    .empty { color: #52525b; font-size: 13px; padding: 20px; text-align: center; }
+    .refresh-indicator { display: inline-block; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; margin-right: 6px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Sales Engine</h1>
+    <div class="meta"><span class="refresh-indicator"></span>Auto-refreshes every 5 min | <span id="last-update">--</span></div>
+  </div>
+
+  <div class="auth-bar" id="auth-bar">
+    <input type="password" id="token-input" placeholder="API Token" />
+    <button onclick="authenticate()">Connect</button>
+  </div>
+
+  <div id="app" style="display:none;">
+    <!-- Summary Cards -->
+    <div class="grid" id="summary-cards"></div>
+
+    <!-- Funnel -->
+    <div class="section">
+      <h2>Funnel</h2>
+      <div class="funnel" id="funnel-bars"></div>
+      <div class="funnel-labels" id="funnel-labels"></div>
+    </div>
+
+    <!-- Two columns: recent sends + recent replies -->
+    <div class="two-col">
+      <div class="section">
+        <h2>Recent Sends</h2>
+        <table id="recent-sends">
+          <thead><tr><th>Contact</th><th>Subject</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="section">
+        <h2>Recent Replies</h2>
+        <table id="recent-replies">
+          <thead><tr><th>Contact</th><th>Category</th><th>Snippet</th><th>Date</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Reply Breakdown -->
+    <div class="section">
+      <h2>Reply Breakdown</h2>
+      <div class="grid" id="reply-breakdown"></div>
+    </div>
+
+    <!-- Contact Search -->
+    <div class="section">
+      <h2>Contact Search</h2>
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search by name, email, or company..." onkeypress="if(event.key==='Enter')searchContacts()" />
+        <button onclick="searchContacts()">Search</button>
+      </div>
+      <table id="search-results">
+        <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Source</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let TOKEN = localStorage.getItem('se_token') || '';
+
+    function authenticate() {
+      TOKEN = document.getElementById('token-input').value;
+      localStorage.setItem('se_token', TOKEN);
+      document.getElementById('auth-bar').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      loadAll();
+    }
+
+    if (TOKEN) {
+      document.getElementById('auth-bar').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      loadAll();
+    }
+
+    async function api(path) {
+      const res = await fetch(`/api${path}`, {
+        headers: { 'Authorization': `Bearer ${TOKEN}` }
+      });
+      if (res.status === 401) {
+        document.getElementById('auth-bar').style.display = 'flex';
+        document.getElementById('app').style.display = 'none';
+        throw new Error('Unauthorized');
+      }
+      return res.json();
+    }
+
+    async function loadAll() {
+      try {
+        const [status, funnel, activity, replies] = await Promise.all([
+          api('/dashboard/status'),
+          api('/dashboard/funnel'),
+          api('/dashboard/activity'),
+          api('/dashboard/replies'),
+        ]);
+        renderSummary(status);
+        renderFunnel(funnel);
+        renderActivity(activity);
+        renderReplies(replies);
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+      } catch (e) {
+        console.error('Load failed:', e);
+      }
+    }
+
+    function renderSummary(data) {
+      const cards = [
+        { label: 'Sent Today', value: data.today.sent },
+        { label: 'Replied Today', value: data.today.replied },
+        { label: 'Sent This Week', value: data.this_week.sent },
+        { label: 'Replied This Week', value: data.this_week.replied },
+        { label: 'Queued', value: data.queued },
+        { label: 'Total Contacts', value: data.total_contacts },
+      ];
+      document.getElementById('summary-cards').innerHTML = cards.map(c =>
+        `<div class="card"><div class="label">${c.label}</div><div class="value">${c.value}</div></div>`
+      ).join('');
+    }
+
+    function renderFunnel(data) {
+      const stages = [
+        { label: 'Emailed', value: data.funnel.emailed, color: '#3b82f6' },
+        { label: 'Replied', value: data.funnel.replied, color: '#8b5cf6' },
+        { label: 'Signed Up', value: data.funnel.signed_up, color: '#f59e0b' },
+        { label: 'Booked', value: data.funnel.booked, color: '#22c55e' },
+        { label: 'Converted', value: data.funnel.converted, color: '#10b981' },
+      ];
+      const max = Math.max(...stages.map(s => s.value), 1);
+      document.getElementById('funnel-bars').innerHTML = stages.map(s => {
+        const h = Math.max((s.value / max) * 100, 4);
+        return `<div class="funnel-bar" style="height:${h}%;background:${s.color}"><span class="tip">${s.value}</span></div>`;
+      }).join('');
+      document.getElementById('funnel-labels').innerHTML = stages.map(s =>
+        `<span>${s.label}</span>`
+      ).join('');
+    }
+
+    function renderActivity(data) {
+      const tbody = document.querySelector('#recent-sends tbody');
+      tbody.innerHTML = data.recent_sends.slice(0, 20).map(s => {
+        const contact = s.contact || {};
+        const date = s.sent_at ? new Date(s.sent_at).toLocaleDateString() : '--';
+        return `<tr>
+          <td>${contact.name || contact.email || '--'}</td>
+          <td>${(s.subject || '').substring(0, 40)}</td>
+          <td><span class="status status-${s.status}">${s.status}</span></td>
+          <td>${date}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="4" class="empty">No sends yet</td></tr>';
+
+      const rtbody = document.querySelector('#recent-replies tbody');
+      rtbody.innerHTML = data.recent_replies.slice(0, 10).map(s => {
+        const contact = s.contact || {};
+        const date = s.replied_at ? new Date(s.replied_at).toLocaleDateString() : '--';
+        return `<tr>
+          <td>${contact.name || contact.email || '--'}</td>
+          <td><span class="status status-${s.reply_category}">${s.reply_category || '--'}</span></td>
+          <td>${(s.reply_snippet || '').substring(0, 60)}</td>
+          <td>${date}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="4" class="empty">No replies yet</td></tr>';
+    }
+
+    function renderReplies(data) {
+      document.getElementById('reply-breakdown').innerHTML = data.map(r =>
+        `<div class="card"><div class="label">${r.reply_category || 'uncategorized'}</div><div class="value">${r.count}</div></div>`
+      ).join('') || '<div class="empty">No reply data</div>';
+    }
+
+    async function searchContacts() {
+      const q = document.getElementById('search-input').value;
+      if (!q) return;
+      const data = await api(`/contacts?search=${encodeURIComponent(q)}&limit=20`);
+      const tbody = document.querySelector('#search-results tbody');
+      tbody.innerHTML = data.contacts.map(c =>
+        `<tr>
+          <td>${c.name || '--'}</td>
+          <td>${c.email}</td>
+          <td>${c.company || '--'}</td>
+          <td><span class="status status-${c.status}">${c.status}</span></td>
+          <td>${c.source}</td>
+        </tr>`
+      ).join('') || '<tr><td colspan="5" class="empty">No results</td></tr>';
+    }
+
+    // Auto-refresh every 5 minutes
+    setInterval(loadAll, 5 * 60 * 1000);
+  </script>
+</body>
+</html>

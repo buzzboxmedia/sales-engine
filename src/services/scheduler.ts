@@ -1,0 +1,120 @@
+import cron from 'node-cron';
+import { Op } from 'sequelize';
+import { processQueue, resetDailyCounters } from './mailer.js';
+import { checkConversions } from './converter.js';
+import { Send, Contact, Sequence } from '../models/index.js';
+
+// Queue follow-up emails for contacts who haven't replied
+async function queueFollowUps(): Promise<number> {
+  // Find sends that were sent but not replied to, where the sequence has a next step
+  const sentNotReplied = await Send.findAll({
+    where: {
+      status: 'sent',
+      sequence_id: { [Op.ne]: null },
+      replied_at: null,
+    },
+    include: [{ model: Contact, as: 'contact' }],
+  });
+
+  let queued = 0;
+  for (const send of sentNotReplied) {
+    if (!send.sequence_id || !send.step_number) continue;
+
+    const contact = (send as any).contact as Contact;
+    if (!contact || contact.suppressed) continue;
+    // Skip if contact already replied, signed up, etc.
+    if (['replied', 'interested', 'not_interested', 'signed_up', 'booked', 'converted', 'unsubscribed', 'bounced'].includes(contact.status)) continue;
+
+    const sequence = await Sequence.findByPk(send.sequence_id);
+    if (!sequence || sequence.status !== 'active') continue;
+
+    const steps = sequence.steps as any[];
+    const nextStepNum = send.step_number + 1;
+    const nextStep = steps.find((s: any) => s.step === nextStepNum);
+    if (!nextStep) continue;
+
+    // Check if enough time has passed
+    const sentAt = send.sent_at;
+    if (!sentAt) continue;
+    const daysSinceSent = (Date.now() - sentAt.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceSent < nextStep.delay_days) continue;
+
+    // Check if follow-up already queued/sent
+    const existing = await Send.findOne({
+      where: {
+        contact_id: send.contact_id,
+        sequence_id: send.sequence_id,
+        step_number: nextStepNum,
+      },
+    });
+    if (existing) continue;
+
+    // Queue the follow-up
+    await Send.create({
+      contact_id: send.contact_id,
+      sequence_id: send.sequence_id,
+      step_number: nextStepNum,
+      sender_email: send.sender_email,
+      subject: replaceVars(nextStep.subject, contact),
+      body: replaceVars(nextStep.body, contact),
+      status: 'queued',
+    });
+    queued++;
+  }
+
+  if (queued > 0) console.log(`Queued ${queued} follow-up emails`);
+  return queued;
+}
+
+function replaceVars(text: string, contact: Contact): string {
+  return text
+    .replace(/\{\{name\}\}/g, contact.name || contact.first_name || 'there')
+    .replace(/\{\{first_name\}\}/g, contact.first_name || contact.name?.split(' ')[0] || 'there')
+    .replace(/\{\{company\}\}/g, contact.company || 'your company')
+    .replace(/\{\{email\}\}/g, contact.email)
+    .replace(/\{\{platform\}\}/g, contact.platform || '')
+    .replace(/\{\{niche\}\}/g, contact.niche || '');
+}
+
+export function startScheduler() {
+  console.log('Starting scheduler...');
+
+  // Process send queue every 2 minutes
+  cron.schedule('*/2 * * * *', async () => {
+    try {
+      const sent = await processQueue();
+      if (sent > 0) console.log(`Processed queue: ${sent} emails sent`);
+    } catch (err) {
+      console.error('Queue processing error:', err);
+    }
+  });
+
+  // Queue follow-ups every 30 minutes
+  cron.schedule('*/30 * * * *', async () => {
+    try {
+      await queueFollowUps();
+    } catch (err) {
+      console.error('Follow-up queuing error:', err);
+    }
+  });
+
+  // Check Talkspresso conversions every 30 minutes
+  cron.schedule('15,45 * * * *', async () => {
+    try {
+      await checkConversions();
+    } catch (err) {
+      console.error('Conversion check error:', err);
+    }
+  });
+
+  // Reset daily send counters at midnight CT
+  cron.schedule('0 0 * * *', async () => {
+    try {
+      await resetDailyCounters();
+    } catch (err) {
+      console.error('Daily reset error:', err);
+    }
+  }, { timezone: 'America/Chicago' });
+
+  console.log('Scheduler started: queue (2m), follow-ups (30m), conversions (30m), daily reset (midnight CT)');
+}
