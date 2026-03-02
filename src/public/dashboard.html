@@ -108,6 +108,11 @@
   </div>
 
   <script>
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+    }
+
     let TOKEN = localStorage.getItem('se_token') || '';
 
     function authenticate() {
@@ -192,10 +197,10 @@
         const contact = s.contact || {};
         const date = s.sent_at ? new Date(s.sent_at).toLocaleDateString() : '--';
         return `<tr>
-          <td>${contact.name || contact.email || '--'}</td>
-          <td>${(s.subject || '').substring(0, 40)}</td>
-          <td><span class="status status-${s.status}">${s.status}</span></td>
-          <td>${date}</td>
+          <td>${esc(contact.name || contact.email || '--')}</td>
+          <td>${esc((s.subject || '').substring(0, 40))}</td>
+          <td><span class="status status-${esc(s.status)}">${esc(s.status)}</span></td>
+          <td>${esc(date)}</td>
         </tr>`;
       }).join('') || '<tr><td colspan="4" class="empty">No sends yet</td></tr>';
 
@@ -204,17 +209,17 @@
         const contact = s.contact || {};
         const date = s.replied_at ? new Date(s.replied_at).toLocaleDateString() : '--';
         return `<tr>
-          <td>${contact.name || contact.email || '--'}</td>
-          <td><span class="status status-${s.reply_category}">${s.reply_category || '--'}</span></td>
-          <td>${(s.reply_snippet || '').substring(0, 60)}</td>
-          <td>${date}</td>
+          <td>${esc(contact.name || contact.email || '--')}</td>
+          <td><span class="status status-${esc(s.reply_category)}">${esc(s.reply_category || '--')}</span></td>
+          <td>${esc((s.reply_snippet || '').substring(0, 60))}</td>
+          <td>${esc(date)}</td>
         </tr>`;
       }).join('') || '<tr><td colspan="4" class="empty">No replies yet</td></tr>';
     }
 
     function renderReplies(data) {
       document.getElementById('reply-breakdown').innerHTML = data.map(r =>
-        `<div class="card"><div class="label">${r.reply_category || 'uncategorized'}</div><div class="value">${r.count}</div></div>`
+        `<div class="card"><div class="label">${esc(r.reply_category || 'uncategorized')}</div><div class="value">${esc(r.count)}</div></div>`
       ).join('') || '<div class="empty">No reply data</div>';
     }
 
@@ -225,11 +230,11 @@
       const tbody = document.querySelector('#search-results tbody');
       tbody.innerHTML = data.contacts.map(c =>
         `<tr>
-          <td>${c.name || '--'}</td>
-          <td>${c.email}</td>
-          <td>${c.company || '--'}</td>
-          <td><span class="status status-${c.status}">${c.status}</span></td>
-          <td>${c.source}</td>
+          <td>${esc(c.name || '--')}</td>
+          <td>${esc(c.email)}</td>
+          <td>${esc(c.company || '--')}</td>
+          <td><span class="status status-${esc(c.status)}">${esc(c.status)}</span></td>
+          <td>${esc(c.source)}</td>
         </tr>`
       ).join('') || '<tr><td colspan="5" class="empty">No results</td></tr>';
     }

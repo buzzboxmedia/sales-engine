@@ -80,6 +80,7 @@ router.get('/replies', async (req: Request, res: Response) => {
 // Daily stats for charting
 router.get('/daily', async (req: Request, res: Response) => {
   const { days = '30' } = req.query;
+  const safeDays = Math.max(1, Math.min(365, parseInt(days as string) || 30));
 
   const [daily] = await sequelize.query(`
     SELECT
@@ -88,10 +89,10 @@ router.get('/daily', async (req: Request, res: Response) => {
       COUNT(*) FILTER (WHERE status = 'replied') as replied,
       COUNT(*) FILTER (WHERE status = 'bounced') as bounced
     FROM sales_engine.sends
-    WHERE sent_at >= NOW() - INTERVAL '${parseInt(days as string)} days'
+    WHERE sent_at >= NOW() - INTERVAL :interval
     GROUP BY DATE(sent_at)
     ORDER BY date
-  `);
+  `, { replacements: { interval: `${safeDays} days` } });
 
   res.json(daily);
 });

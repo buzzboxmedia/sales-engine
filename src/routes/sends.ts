@@ -52,7 +52,7 @@ router.get('/replies', async (req: Request, res: Response) => {
     where: { status: 'replied' },
     include: [{ model: Contact, as: 'contact', attributes: ['id', 'email', 'name', 'company'] }],
     order: [['replied_at', 'DESC']],
-    limit: parseInt(limit as string),
+    limit: Math.min(parseInt(limit as string), 200),
   });
 
   res.json(replies);

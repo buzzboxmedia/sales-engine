@@ -4,6 +4,16 @@ import { Sequence, Contact, Send } from '../models/index.js';
 const router = Router();
 const param = (v: string | string[]) => Array.isArray(v) ? v[0] : v;
 
+const SEQUENCE_FIELDS = ['name', 'subject', 'steps', 'status'] as const;
+
+function pick<T extends Record<string, any>>(obj: T, fields: readonly string[]): Partial<T> {
+  const result: any = {};
+  for (const key of fields) {
+    if (key in obj) result[key] = obj[key];
+  }
+  return result;
+}
+
 // List sequences
 router.get('/', async (req: Request, res: Response) => {
   const sequences = await Sequence.findAll({ order: [['created_at', 'DESC']] });
@@ -19,7 +29,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 // Create sequence
 router.post('/', async (req: Request, res: Response) => {
-  const seq = await Sequence.create(req.body);
+  const seq = await Sequence.create(pick(req.body, SEQUENCE_FIELDS) as any);
   res.status(201).json(seq);
 });
 
@@ -27,7 +37,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id', async (req: Request, res: Response) => {
   const seq = await Sequence.findByPk(param(req.params.id));
   if (!seq) { res.status(404).json({ error: 'Sequence not found' }); return; }
-  await seq.update({ ...req.body, updated_at: new Date() });
+  await seq.update({ ...pick(req.body, SEQUENCE_FIELDS), updated_at: new Date() });
   res.json(seq);
 });
 

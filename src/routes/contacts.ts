@@ -5,6 +5,17 @@ import { Contact, Send, Conversion } from '../models/index.js';
 const router = Router();
 const param = (v: string | string[]) => Array.isArray(v) ? v[0] : v;
 
+const CONTACT_CREATE_FIELDS = ['email', 'name', 'first_name', 'company', 'title', 'platform', 'niche', 'source', 'tags', 'notes', 'profile_url', 'followers'] as const;
+const CONTACT_UPDATE_FIELDS = ['name', 'first_name', 'company', 'title', 'platform', 'niche', 'tags', 'notes', 'status', 'profile_url', 'followers'] as const;
+
+function pick<T extends Record<string, any>>(obj: T, fields: readonly string[]): Partial<T> {
+  const result: any = {};
+  for (const key of fields) {
+    if (key in obj) result[key] = obj[key];
+  }
+  return result;
+}
+
 // List contacts with filtering
 router.get('/', async (req: Request, res: Response) => {
   const { status, source, project, search, tag, suppressed, limit = '50', offset = '0' } = req.query;
@@ -47,7 +58,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 // Create contact
 router.post('/', async (req: Request, res: Response) => {
-  const contact = await Contact.create(req.body);
+  const contact = await Contact.create(pick(req.body, CONTACT_CREATE_FIELDS) as any);
   res.status(201).json(contact);
 });
 
@@ -55,7 +66,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id', async (req: Request, res: Response) => {
   const contact = await Contact.findByPk(param(req.params.id));
   if (!contact) { res.status(404).json({ error: 'Contact not found' }); return; }
-  await contact.update({ ...req.body, updated_at: new Date() });
+  await contact.update({ ...pick(req.body, CONTACT_UPDATE_FIELDS), updated_at: new Date() });
   res.json(contact);
 });
 
@@ -67,7 +78,7 @@ router.post('/import', async (req: Request, res: Response) => {
   let created = 0, skipped = 0;
   for (const c of contacts) {
     try {
-      await Contact.create(c);
+      await Contact.create(pick(c, CONTACT_CREATE_FIELDS) as any);
       created++;
     } catch (err: any) {
       if (err.name === 'SequelizeUniqueConstraintError') {

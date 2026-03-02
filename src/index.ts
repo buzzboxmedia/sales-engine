@@ -4,6 +4,8 @@ dotenv.config();
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { sequelize } from './db.js';
 import './models/index.js'; // register associations
 import contactRoutes from './routes/contacts.js';
@@ -16,8 +18,29 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = parseInt(process.env.PORT || '3100');
 
+// Security headers (permissive CSP for inline scripts/styles in dashboard)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+}));
+
 // Middleware
 app.use(express.json({ limit: '5mb' }));
+
+// Rate limit API routes: 200 requests per 15 minutes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+app.use('/api/', apiLimiter);
 
 // Auth middleware for API routes
 function authMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -53,6 +76,12 @@ app.use('/api/dashboard', authMiddleware, dashboardRoutes);
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Global error handler - no stack traces in responses
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Start
