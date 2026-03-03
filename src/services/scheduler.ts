@@ -2,7 +2,38 @@ import cron from 'node-cron';
 import { Op } from 'sequelize';
 import { processQueue, resetDailyCounters } from './mailer.js';
 import { checkConversions } from './converter.js';
-import { Send, Contact, Sequence } from '../models/index.js';
+import { Send, Contact, Sequence, SendingAccount } from '../models/index.js';
+
+// Domain warmup schedule: [day_threshold, daily_limit]
+// Domain age starts from WARMUP_START_DATE. Ramps conservatively to protect reputation.
+const WARMUP_START_DATE = new Date('2026-03-03');
+const WARMUP_SCHEDULE: [number, number][] = [
+  [0, 15],    // Days 0-6:   15/day
+  [7, 30],    // Days 7-13:  30/day
+  [14, 50],   // Days 14-20: 50/day
+  [21, 75],   // Days 21-27: 75/day
+  [28, 100],  // Days 28-41: 100/day
+  [42, 150],  // Days 42-55: 150/day
+  [56, 200],  // Days 56+:   200/day (full speed)
+];
+
+async function applyWarmupLimit(): Promise<void> {
+  const daysSinceStart = Math.floor((Date.now() - WARMUP_START_DATE.getTime()) / (1000 * 60 * 60 * 24));
+
+  // Find the right tier: last entry where daysSinceStart >= threshold
+  let targetLimit = WARMUP_SCHEDULE[0][1];
+  for (const [threshold, limit] of WARMUP_SCHEDULE) {
+    if (daysSinceStart >= threshold) targetLimit = limit;
+  }
+
+  const accounts = await SendingAccount.findAll({ where: { status: { [Op.in]: ['active', 'warmup'] } } });
+  for (const account of accounts) {
+    if (account.daily_limit !== targetLimit) {
+      await account.update({ daily_limit: targetLimit, updated_at: new Date() });
+      console.log(`Warmup: ${account.email} daily_limit updated to ${targetLimit} (day ${daysSinceStart})`);
+    }
+  }
+}
 
 // Daily enrollment target: starts at 50, increase per the ramp schedule.
 // Adjust this value as sending infrastructure scales.
@@ -246,14 +277,18 @@ export function startScheduler() {
     }
   }, { timezone: 'America/Chicago' });
 
-  // Reset daily send counters at midnight CT
+  // Reset daily send counters at midnight CT + apply warmup limit
   cron.schedule('0 0 * * *', async () => {
     try {
       await resetDailyCounters();
+      await applyWarmupLimit();
     } catch (err) {
       console.error('Daily reset error:', err);
     }
   }, { timezone: 'America/Chicago' });
+
+  // Apply warmup limit on startup too
+  applyWarmupLimit().catch(err => console.error('Warmup init error:', err));
 
   console.log('Scheduler started: queue (2m), follow-ups (30m), conversions (30m), enrollment (8am CT), daily reset (midnight CT)');
 }
