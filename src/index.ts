@@ -17,6 +17,7 @@ import activityRoutes from './routes/activity.js';
 import templateRoutes from './routes/templates.js';
 import listRoutes from './routes/lists.js';
 import companyRoutes from './routes/companies.js';
+import adminRoutes from './routes/admin.js';
 import { startScheduler } from './services/scheduler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -107,6 +108,7 @@ app.use('/api/activity', authMiddleware, activityRoutes);
 app.use('/api/templates', authMiddleware, templateRoutes);
 app.use('/api/lists', authMiddleware, listRoutes);
 app.use('/api/companies', authMiddleware, companyRoutes);
+app.use('/api/admin', authMiddleware, adminRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

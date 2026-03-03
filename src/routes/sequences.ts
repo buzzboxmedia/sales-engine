@@ -127,8 +127,8 @@ function replaceVars(text: string, contact: Contact): string {
     .replace(/\{\{first_name\}\}/g, contact.first_name || contact.name?.split(' ')[0] || 'there')
     .replace(/\{\{company\}\}/g, contact.company || 'your company')
     .replace(/\{\{email\}\}/g, contact.email)
-    .replace(/\{\{platform\}\}/g, contact.platform || '')
-    .replace(/\{\{niche\}\}/g, contact.niche || '');
+    .replace(/\{\{platform\}\}/g, contact.platform || 'your platform')
+    .replace(/\{\{niche\}\}/g, contact.niche || 'your space');
 }
 
 export default router;
