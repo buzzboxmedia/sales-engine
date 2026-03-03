@@ -4,6 +4,135 @@ import { processQueue, resetDailyCounters } from './mailer.js';
 import { checkConversions } from './converter.js';
 import { Send, Contact, Sequence } from '../models/index.js';
 
+// Daily enrollment target: starts at 50, increase per the ramp schedule.
+// Adjust this value as sending infrastructure scales.
+const DAILY_ENROLLMENT_TARGET = parseInt(process.env.DAILY_ENROLLMENT_TARGET || '50');
+
+// Terminal statuses — contacts in these states are never enrolled or followed up
+const TERMINAL_STATUSES = ['replied', 'interested', 'not_interested', 'signed_up', 'booked', 'converted', 'unsubscribed', 'bounced'];
+
+// Persona segmentation: maps sequence name to niche/title keyword tests.
+// Precedence order: A → B → C → D → E (first match wins).
+function getPersonaSequenceName(contact: Contact): string {
+  const niche = (contact.niche || '').toLowerCase();
+  const title = (contact.title || '').toLowerCase();
+
+  // Persona A: Fitness & Wellness
+  if (/fitness|health|wellness|nutrition|yoga|workout|weight|gym/.test(niche)) {
+    return 'fitness-wellness-outreach';
+  }
+
+  // Persona B: Business & Career Coach
+  if (/business|entrepreneur|career|leadership|productivity|sales|startup|coach/.test(niche) ||
+      /coach|consultant|advisor/.test(title)) {
+    return 'business-coach-outreach';
+  }
+
+  // Persona C: Creative & Content Creator
+  if (/photography|design|creative|podcast|music|art|video|content|writer|film/.test(niche)) {
+    return 'creative-creator-outreach';
+  }
+
+  // Persona D: Finance & Investing
+  if (/finance|investing|money|tax|crypto|stock|wealth|trading|budget|financial/.test(niche)) {
+    return 'finance-expert-outreach';
+  }
+
+  // Persona E: General (catch-all)
+  return 'general-expert-outreach';
+}
+
+// Enroll a batch of new contacts into their persona-matched sequences
+async function enrollContacts(): Promise<number> {
+  // Load all persona sequences once
+  const sequences = await Sequence.findAll({
+    where: {
+      project: 'talkspresso',
+      status: 'active',
+      name: {
+        [Op.in]: [
+          'fitness-wellness-outreach',
+          'business-coach-outreach',
+          'creative-creator-outreach',
+          'finance-expert-outreach',
+          'general-expert-outreach',
+        ],
+      },
+    },
+  });
+
+  const seqByName = new Map<string, Sequence>();
+  for (const seq of sequences) seqByName.set(seq.name, seq);
+
+  // Find unenrolled, unsuppressed contacts with status 'new'
+  // Prioritise by followers DESC (higher reach first), then id for stability
+  const candidates = await Contact.findAll({
+    where: {
+      project: 'talkspresso',
+      status: 'new',
+      suppressed: false,
+    },
+    order: [
+      ['followers', 'DESC NULLS LAST'],
+      ['id', 'ASC'],
+    ],
+    limit: DAILY_ENROLLMENT_TARGET * 3, // fetch extra to account for already-active contacts
+  });
+
+  let enrolled = 0;
+  let skipped = 0;
+
+  for (const contact of candidates) {
+    if (enrolled >= DAILY_ENROLLMENT_TARGET) break;
+
+    // Skip if contact is in a terminal status (double-check after fetch)
+    if (TERMINAL_STATUSES.includes(contact.status)) { skipped++; continue; }
+
+    // Skip if contact already has any active sequence enrollment
+    const activeEnrollment = await Send.findOne({
+      where: {
+        contact_id: contact.id,
+        status: { [Op.in]: ['queued', 'sent'] },
+        sequence_id: { [Op.ne]: null },
+      },
+    });
+    if (activeEnrollment) { skipped++; continue; }
+
+    // Determine persona sequence
+    const seqName = getPersonaSequenceName(contact);
+    const seq = seqByName.get(seqName);
+    if (!seq) { skipped++; continue; }
+
+    const steps = seq.steps as any[];
+    if (!steps.length) { skipped++; continue; }
+
+    // Check not already enrolled in this sequence
+    const alreadyEnrolled = await Send.findOne({
+      where: { contact_id: contact.id, sequence_id: seq.id },
+    });
+    if (alreadyEnrolled) { skipped++; continue; }
+
+    const firstStep = steps[0];
+    await Send.create({
+      contact_id: contact.id,
+      sequence_id: seq.id,
+      step_number: 1,
+      sender_email: 'baron@trytalkspresso.com',
+      subject: replaceVars(firstStep.subject, contact),
+      body: replaceVars(firstStep.body, contact),
+      status: 'queued',
+    });
+
+    await contact.update({ status: 'contacted', updated_at: new Date() });
+    enrolled++;
+  }
+
+  if (enrolled > 0 || skipped > 0) {
+    console.log(`Daily enrollment: ${enrolled} enrolled, ${skipped} skipped`);
+  }
+  return enrolled;
+}
+
 // Queue follow-up emails for contacts who haven't replied
 async function queueFollowUps(): Promise<number> {
   // Find sends that were sent but not replied to, where the sequence has a next step
@@ -107,6 +236,16 @@ export function startScheduler() {
     }
   });
 
+  // Daily enrollment: run at 8am CT — enroll new contacts into persona sequences
+  cron.schedule('0 8 * * *', async () => {
+    try {
+      const count = await enrollContacts();
+      if (count > 0) console.log(`Daily enrollment complete: ${count} contacts enrolled`);
+    } catch (err) {
+      console.error('Daily enrollment error:', err);
+    }
+  }, { timezone: 'America/Chicago' });
+
   // Reset daily send counters at midnight CT
   cron.schedule('0 0 * * *', async () => {
     try {
@@ -116,5 +255,5 @@ export function startScheduler() {
     }
   }, { timezone: 'America/Chicago' });
 
-  console.log('Scheduler started: queue (2m), follow-ups (30m), conversions (30m), daily reset (midnight CT)');
+  console.log('Scheduler started: queue (2m), follow-ups (30m), conversions (30m), enrollment (8am CT), daily reset (midnight CT)');
 }

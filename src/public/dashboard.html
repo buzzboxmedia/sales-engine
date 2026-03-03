@@ -2809,7 +2809,7 @@ async function renderSchedule() {
   `;
 
   try {
-    scheduleData = await api('/dashboard/schedule?days=90');
+    scheduleData = await api('/dashboard/schedule?days=180');
     renderCalendarGrid();
   } catch (e) {
     document.getElementById('cal-grid').innerHTML = `<div style="grid-column:1/-1;padding:24px;color:var(--error);font-size:13px;">Failed to load schedule: ${esc(e.message)}</div>`;

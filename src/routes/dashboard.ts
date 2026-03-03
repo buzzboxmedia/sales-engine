@@ -138,7 +138,7 @@ router.get('/status', async (req: Request, res: Response) => {
 // Schedule: queued sends + projected future sends for next 30 days
 router.get('/schedule', async (req: Request, res: Response) => {
   const { days = '30' } = req.query;
-  const safeDays = Math.max(1, Math.min(90, parseInt(days as string) || 30));
+  const safeDays = Math.max(1, Math.min(180, parseInt(days as string) || 30));
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
