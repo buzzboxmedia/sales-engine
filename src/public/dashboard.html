@@ -2256,7 +2256,7 @@ async function loadSends() {
       tbody.innerHTML = sends.map(s => {
         const c = s.contact || {};
         return `
-          <tr>
+          <tr class="clickable" onclick="openSendPanel('${esc(s.id)}')">
             <td>
               <div style="font-size:13px;">${esc(c.name || c.email || '—')}</div>
               ${c.company ? `<div style="font-size:11px;color:var(--text-muted);">${esc(c.company)}</div>` : ''}
@@ -2280,6 +2280,56 @@ async function loadSends() {
     });
   } catch (e) {
     console.error('Load sends failed:', e);
+  }
+}
+
+async function openSendPanel(id) {
+  openPanel(`<div class="panel-header" style="position:relative;">
+    <button class="panel-close" onclick="closePanel()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="color:var(--text-muted);font-size:13px;">Loading email…</div>
+  </div><div class="panel-body"></div>`);
+
+  try {
+    const s = await api('/sends/' + id);
+    const c = s.contact || {};
+    const body = (s.body || '').replace(/\n/g, '<br>');
+
+    openPanel(`
+      <div class="panel-header" style="position:relative;">
+        <button class="panel-close" onclick="closePanel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          ${statusBadge(s.status)}
+          ${s.open_count > 0 ? '<span class="badge badge-purple">Opened ' + s.open_count + 'x</span>' : ''}
+          ${s.click_count > 0 ? '<span class="badge badge-blue">Clicked ' + s.click_count + 'x</span>' : ''}
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">To</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text-primary);">${esc(c.name || c.email || '—')}</div>
+        <div style="font-size:12px;color:var(--text-secondary);">${esc(c.email || '')}</div>
+        ${c.company ? '<div style="font-size:12px;color:var(--text-muted);">' + esc(c.company) + '</div>' : ''}
+      </div>
+      <div class="panel-body" style="padding:16px;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Subject</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:16px;">${esc(s.subject || '—')}</div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Message</div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:16px;">${body}</div>
+        <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;">
+          <div style="font-size:11px;color:var(--text-muted);">
+            <span style="text-transform:uppercase;letter-spacing:0.5px;">Sent</span><br>
+            <span style="color:var(--text-secondary);">${s.sent_at ? new Date(s.sent_at).toLocaleString() : 'Not sent yet'}</span>
+          </div>
+          ${s.first_opened_at ? '<div style="font-size:11px;color:var(--text-muted);"><span style="text-transform:uppercase;letter-spacing:0.5px;">First Opened</span><br><span style="color:var(--text-secondary);">' + new Date(s.first_opened_at).toLocaleString() + '</span></div>' : ''}
+          ${s.replied_at ? '<div style="font-size:11px;color:var(--text-muted);"><span style="text-transform:uppercase;letter-spacing:0.5px;">Replied</span><br><span style="color:var(--text-secondary);">' + new Date(s.replied_at).toLocaleString() + '</span></div>' : ''}
+        </div>
+        ${c.id ? '<div style="margin-top:16px;"><button class="btn btn-secondary btn-sm" onclick="openContactPanel(\\'' + esc(c.id) + '\\')">View Contact</button></div>' : ''}
+      </div>
+    `);
+  } catch (e) {
+    console.error('Failed to load send:', e);
+    openPanel('<div class="panel-header"><div style="color:var(--error);">Failed to load email details</div></div>');
   }
 }
 

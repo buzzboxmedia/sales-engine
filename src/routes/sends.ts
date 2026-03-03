@@ -25,6 +25,15 @@ router.get('/', async (req: Request, res: Response) => {
   res.json({ total: sends.count, sends: sends.rows });
 });
 
+// Get single send with full body
+router.get('/:id', async (req: Request, res: Response) => {
+  const send = await Send.findByPk(param(req.params.id), {
+    include: [{ model: Contact, as: 'contact', attributes: ['id', 'email', 'name', 'company', 'status', 'lead_score'] }],
+  });
+  if (!send) { res.status(404).json({ error: 'Send not found' }); return; }
+  res.json(send);
+});
+
 // Queue a one-off email
 router.post('/queue', async (req: Request, res: Response) => {
   const { contact_id, sender_email, subject, body } = req.body;
