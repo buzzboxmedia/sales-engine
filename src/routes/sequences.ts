@@ -41,6 +41,14 @@ router.patch('/:id', async (req: Request, res: Response) => {
   res.json(seq);
 });
 
+// Delete a sequence
+router.delete('/:id', async (req: Request, res: Response) => {
+  const seq = await Sequence.findByPk(param(req.params.id));
+  if (!seq) { res.status(404).json({ error: 'Sequence not found' }); return; }
+  await seq.destroy();
+  res.json({ success: true });
+});
+
 // Enroll a contact in a sequence (queue step 1)
 router.post('/:id/enroll', async (req: Request, res: Response) => {
   const { contact_id, sender_email } = req.body;
