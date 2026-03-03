@@ -6,6 +6,15 @@ import { Op } from 'sequelize';
 
 const BASE_URL = process.env.BASE_URL || 'https://sales.talkspresso.com';
 
+// DKIM signing config (selector: se, domain: trytalkspresso.com)
+const DKIM_CONFIG = process.env.DKIM_PRIVATE_KEY
+  ? {
+      domainName: 'trytalkspresso.com',
+      keySelector: 'se',
+      privateKey: process.env.DKIM_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }
+  : null;
+
 // Check if a URL is a talkspresso.com destination
 function isTalkspressoUrl(url: string): boolean {
   try {
@@ -162,6 +171,7 @@ export async function sendEmail(send: Send): Promise<boolean> {
       subject: send.subject,
       html: trackedHtml,
       text: plainText,
+      ...(DKIM_CONFIG ? { dkim: DKIM_CONFIG } : {}),
     });
 
     await send.update({ status: 'sent', sent_at: new Date() });
