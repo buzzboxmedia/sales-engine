@@ -2265,8 +2265,25 @@ async function openSequenceDetail(id) {
   `);
 
   try {
-    const seq = await api(`/sequences/${id}`);
+    const [seq, enrollData] = await Promise.all([
+      api(`/sequences/${id}`),
+      api(`/sequences/${id}/enrollees?limit=200`),
+    ]);
     const steps = Array.isArray(seq.steps) ? seq.steps : [];
+    const stepSummary = enrollData.step_summary || [];
+    const enrollees = enrollData.enrollees || [];
+    const totalEnrolled = enrollData.total || 0;
+    const stepCount = enrollData.step_count || steps.length;
+
+    // Step dot helper: returns colored dot based on send status
+    function stepDot(status, hasOpened) {
+      if (!status) return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--border-light);" title="Pending"></span>';
+      if (status === 'queued') return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--text-muted);" title="Queued"></span>';
+      if (status === 'bounced') return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--error);" title="Bounced"></span>';
+      if (status === 'replied') return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--purple);" title="Replied"></span>';
+      if (hasOpened) return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--success);" title="Opened"></span>';
+      return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent);" title="Sent"></span>';
+    }
 
     const html = `
       <div class="panel-header" style="position:relative;">
@@ -2275,26 +2292,64 @@ async function openSequenceDetail(id) {
         </button>
         <div style="margin-bottom:10px;">
           <div style="font-size:18px;font-weight:700;margin-bottom:4px;">${esc(seq.name)}</div>
-          <div style="display:flex;gap:8px;align-items:center;">${statusBadge(seq.status || 'active')}<span style="font-size:12px;color:var(--text-muted);">${steps.length} steps</span></div>
+          <div style="display:flex;gap:8px;align-items:center;">${statusBadge(seq.status || 'active')}<span style="font-size:12px;color:var(--text-muted);">${steps.length} steps &middot; ${totalEnrolled} enrolled</span></div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openEnrollModal('${esc(seq.id)}')">Enroll Contacts</button>
       </div>
       <div class="panel-body">
-        <div class="panel-section-title">Sequence Steps</div>
-        <div class="seq-steps">
-          ${steps.map((step, i) => `
-            <div class="seq-step">
-              <div class="seq-step-line">
-                <div class="seq-step-num">${i + 1}</div>
-                ${i < steps.length - 1 ? '<div class="seq-step-connector"></div>' : ''}
-              </div>
-              <div class="seq-step-body">
-                <div class="seq-step-subject">${esc(step.subject || 'No subject')}</div>
-                <div class="seq-step-delay">${i === 0 ? 'Immediately' : `${step.delay_days || 3} day${(step.delay_days || 3) !== 1 ? 's' : ''} after previous`}</div>
-                <div style="font-size:12px;color:var(--text-secondary);line-height:1.4;margin-bottom:8px;">${esc((step.body || '').substring(0, 120))}${(step.body || '').length > 120 ? '…' : ''}</div>
+        <div class="panel-section-title">Step Performance</div>
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+          ${stepSummary.map((ss, i) => `
+            <div style="flex:1;min-width:100px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Step ${i+1}</div>
+              <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(ss.subject)}</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:11px;">
+                ${ss.queued > 0 ? '<span style="color:var(--text-muted);">'+ss.queued+' queued</span>' : ''}
+                ${ss.sent > 0 ? '<span style="color:var(--accent);">'+ss.sent+' sent</span>' : ''}
+                ${ss.opened > 0 ? '<span style="color:var(--success);">'+ss.opened+' opened</span>' : ''}
+                ${ss.replied > 0 ? '<span style="color:var(--purple);">'+ss.replied+' replied</span>' : ''}
+                ${ss.bounced > 0 ? '<span style="color:var(--error);">'+ss.bounced+' bounced</span>' : ''}
+                ${(ss.queued + ss.sent + ss.opened + ss.replied + ss.bounced) === 0 ? '<span style="color:var(--text-muted);">No sends yet</span>' : ''}
               </div>
             </div>
           `).join('')}
+        </div>
+
+        <div class="panel-section-title">Enrollees (${totalEnrolled})</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:flex;gap:12px;flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--border-light);"></span> Pending</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text-muted);"></span> Queued</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);"></span> Sent</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);"></span> Opened</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--purple);"></span> Replied</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--error);"></span> Bounced</span>
+        </div>
+
+        <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th style="position:sticky;top:0;background:var(--bg-card);z-index:1;">Contact</th>
+                ${Array.from({length: stepCount}, (_, i) => '<th style="text-align:center;position:sticky;top:0;background:var(--bg-card);z-index:1;width:50px;">S'+(i+1)+'</th>').join('')}
+                <th style="position:sticky;top:0;background:var(--bg-card);z-index:1;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${enrollees.length === 0 ? '<tr><td colspan="'+(stepCount+2)+'"><div class="empty-state"><p>No enrollees yet</p></div></td></tr>' : ''}
+              ${enrollees.map(e => {
+                const stepMap = {};
+                e.steps.forEach(s => { stepMap[s.step] = s; });
+                return '<tr>' +
+                  '<td><div style="font-size:13px;">' + esc(e.name) + '</div><div style="font-size:11px;color:var(--text-muted);">' + esc(e.email) + '</div></td>' +
+                  Array.from({length: stepCount}, (_, i) => {
+                    const s = stepMap[i+1];
+                    return '<td style="text-align:center;">' + stepDot(s ? s.status : null, s ? s.open_count > 0 : false) + '</td>';
+                  }).join('') +
+                  '<td>' + statusBadge(e.contact_status) + '</td>' +
+                '</tr>';
+              }).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
     `;

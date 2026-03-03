@@ -121,6 +121,80 @@ router.post('/:id/enroll-bulk', async (req: Request, res: Response) => {
   res.json({ queued, skipped });
 });
 
+// Get enrollees and their step progress for a sequence
+router.get('/:id/enrollees', async (req: Request, res: Response) => {
+  const seq = await Sequence.findByPk(param(req.params.id));
+  if (!seq) { res.status(404).json({ error: 'Sequence not found' }); return; }
+
+  const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+  const offset = parseInt(req.query.offset as string) || 0;
+
+  // Get all sends for this sequence grouped by contact
+  const sends = await Send.findAll({
+    where: { sequence_id: seq.id },
+    include: [{ model: Contact, as: 'contact', attributes: ['id', 'name', 'first_name', 'email', 'status'] }],
+    order: [['step_number', 'ASC']],
+  });
+
+  // Group by contact
+  const contactMap = new Map<string, {
+    contact_id: string;
+    name: string;
+    email: string;
+    contact_status: string;
+    steps: Array<{ step: number; status: string; sent_at: string | null; opened_at: string | null; open_count: number; click_count: number; replied_at: string | null; reply_category: string | null }>;
+  }>();
+
+  for (const send of sends) {
+    const c = (send as any).contact;
+    if (!c) continue;
+    if (!contactMap.has(c.id)) {
+      contactMap.set(c.id, {
+        contact_id: c.id,
+        name: c.name || c.first_name || c.email,
+        email: c.email,
+        contact_status: c.status,
+        steps: [],
+      });
+    }
+    contactMap.get(c.id)!.steps.push({
+      step: send.step_number || 1,
+      status: send.status,
+      sent_at: send.sent_at?.toISOString() || null,
+      opened_at: send.opened_at?.toISOString() || null,
+      open_count: send.open_count || 0,
+      click_count: send.click_count || 0,
+      replied_at: send.replied_at?.toISOString() || null,
+      reply_category: send.reply_category || null,
+    });
+  }
+
+  const enrollees = Array.from(contactMap.values());
+  const total = enrollees.length;
+  const paged = enrollees.slice(offset, offset + limit);
+
+  const steps = seq.steps as any[];
+  const stepCount = steps.length;
+
+  // Summary counts per step
+  const stepSummary = steps.map((s: any, i: number) => {
+    const stepNum = i + 1;
+    const stepSends = sends.filter(se => se.step_number === stepNum);
+    return {
+      step: stepNum,
+      subject: s.subject,
+      delay_days: s.delay_days,
+      queued: stepSends.filter(se => se.status === 'queued').length,
+      sent: stepSends.filter(se => se.status === 'sent').length,
+      opened: stepSends.filter(se => (se.open_count || 0) > 0).length,
+      replied: stepSends.filter(se => se.status === 'replied').length,
+      bounced: stepSends.filter(se => se.status === 'bounced').length,
+    };
+  });
+
+  res.json({ total, step_count: stepCount, step_summary: stepSummary, enrollees: paged });
+});
+
 function replaceVars(text: string, contact: Contact): string {
   return text
     .replace(/\{\{name\}\}/g, contact.name || contact.first_name || 'there')
