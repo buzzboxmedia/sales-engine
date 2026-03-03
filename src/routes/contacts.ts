@@ -18,11 +18,12 @@ function pick<T extends Record<string, any>>(obj: T, fields: readonly string[]):
 
 // List contacts with filtering
 router.get('/', async (req: Request, res: Response) => {
-  const { status, source, project, search, tag, suppressed, limit = '50', offset = '0' } = req.query;
+  const { status, source, niche, project, search, tag, suppressed, limit = '50', offset = '0' } = req.query;
 
   const where: any = {};
   if (status) where.status = status;
   if (source) where.source = source;
+  if (niche) where.niche = niche;
   if (project) where.project = project;
   if (suppressed !== undefined) where.suppressed = suppressed === 'true';
   if (tag) where.tags = { [Op.contains]: [tag as string] };
@@ -42,6 +43,18 @@ router.get('/', async (req: Request, res: Response) => {
   });
 
   res.json({ total: contacts.count, contacts: contacts.rows });
+});
+
+// Get distinct niches for filter dropdown
+router.get('/meta/niches', async (req: Request, res: Response) => {
+  const [results] = await Contact.sequelize!.query(`
+    SELECT niche, COUNT(*) as count
+    FROM sales_engine.contacts
+    WHERE niche IS NOT NULL AND niche != ''
+    GROUP BY niche
+    ORDER BY count DESC
+  `);
+  res.json(results);
 });
 
 // Get single contact with sends + conversions
