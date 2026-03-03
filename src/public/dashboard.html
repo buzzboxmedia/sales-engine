@@ -252,7 +252,8 @@
       overflow: hidden;
       transition: border-color 0.15s;
     }
-    .kpi-card:hover { border-color: var(--border-light); }
+    .kpi-card { cursor: pointer; }
+    .kpi-card:hover { border-color: var(--border-light); transform: translateY(-1px); }
     .kpi-card .kpi-label {
       font-size: 11px; font-weight: 600;
       color: var(--text-muted);
@@ -313,7 +314,7 @@
       flex-direction: column; gap: 2px;
       position: relative; flex: 1;
       transition: filter 0.15s;
-      cursor: default;
+      cursor: pointer;
     }
     .funnel-stage:hover { filter: brightness(1.15); }
     .funnel-stage .f-count {
@@ -1113,6 +1114,15 @@ function closeMobileSidebar() {
   document.getElementById('sidebar').classList.remove('mobile-open');
 }
 
+function navigateToContacts(status) {
+  contactsState.status = status || '';
+  contactsState.search = '';
+  contactsState.source = '';
+  contactsState.offset = 0;
+  location.hash = 'contacts';
+  navigate('contacts');
+}
+
 // ═══════════════════════════════════════════════
 // PANEL
 // ═══════════════════════════════════════════════
@@ -1286,12 +1296,14 @@ function renderKPIs(status, funnel) {
       value: status.total_contacts || 0,
       sub: `${status.queued || 0} queued to email`,
       color: '#0066FF',
+      click: '',
     },
     {
       label: 'Emails Sent',
       value: totalSent,
       sub: `${status.today?.sent || 0} today`,
       color: '#9c6afe',
+      click: 'contacted',
     },
     {
       label: 'Open Rate',
@@ -1299,6 +1311,7 @@ function renderKPIs(status, funnel) {
       sub: 'estimated from replies',
       color: '#00E676',
       isStr: true,
+      click: 'contacted',
     },
     {
       label: 'Reply Rate',
@@ -1306,23 +1319,26 @@ function renderKPIs(status, funnel) {
       sub: `${totalReplied} total replies`,
       color: '#00E676',
       isStr: true,
+      click: 'replied',
     },
     {
       label: 'Signups',
       value: signedUp,
       sub: pct(signedUp, totalReplied) + ' of replies',
       color: '#FF9800',
+      click: 'signed_up',
     },
     {
       label: 'Converted',
       value: funnel.funnel.converted || 0,
       sub: pct(funnel.funnel.converted || 0, signedUp) + ' of signups',
       color: '#FF5252',
+      click: 'converted',
     },
   ];
 
   document.getElementById('kpi-grid').innerHTML = kpis.map(k => `
-    <div class="kpi-card">
+    <div class="kpi-card" onclick="navigateToContacts('${k.click}')">
       <div class="kpi-accent-bar" style="background:${k.color};opacity:0.6;"></div>
       <div class="kpi-label">${esc(k.label)}</div>
       <div class="kpi-value" data-val="${k.isStr ? '' : k.value}" data-str="${k.isStr ? k.value : ''}">
@@ -1342,12 +1358,12 @@ function renderKPIs(status, funnel) {
 function renderFunnel(funnel) {
   const f = funnel.funnel;
   const stages = [
-    { label: 'Emailed', val: f.emailed, color: '#0066FF' },
-    { label: 'Opened', val: Math.round((f.emailed || 0) * 0.28), color: '#4d94ff' },
-    { label: 'Replied', val: f.replied, color: '#9c6afe' },
-    { label: 'Signed Up', val: f.signed_up, color: '#FF9800' },
-    { label: 'Booked', val: f.booked, color: '#00c853' },
-    { label: 'Paid', val: f.converted, color: '#00E676' },
+    { label: 'Emailed', val: f.emailed, color: '#0066FF', click: 'contacted' },
+    { label: 'Opened', val: Math.round((f.emailed || 0) * 0.28), color: '#4d94ff', click: 'contacted' },
+    { label: 'Replied', val: f.replied, color: '#9c6afe', click: 'replied' },
+    { label: 'Signed Up', val: f.signed_up, color: '#FF9800', click: 'signed_up' },
+    { label: 'Booked', val: f.booked, color: '#00c853', click: 'booked' },
+    { label: 'Paid', val: f.converted, color: '#00E676', click: 'converted' },
   ];
 
   const funnelEl = document.getElementById('funnel-stages');
@@ -1356,7 +1372,7 @@ function renderFunnel(funnel) {
   funnelEl.innerHTML = stages.map((s, i) => {
     const opacity = 1 - (i * 0.06);
     return `
-      <div class="funnel-stage" style="background:${s.color};opacity:${opacity};" title="${s.label}: ${s.val}">
+      <div class="funnel-stage" style="background:${s.color};opacity:${opacity};" title="${s.label}: ${s.val}" onclick="navigateToContacts('${s.click}')">
         <span class="f-count">${(s.val || 0).toLocaleString()}</span>
         <span class="f-label">${s.label}</span>
       </div>
