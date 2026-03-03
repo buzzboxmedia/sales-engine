@@ -4,32 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sales Engine — Mission Control</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg-base: #0a0a0f;
-      --bg-card: #111118;
-      --bg-card-hover: #16161f;
-      --border: #1a1a24;
-      --border-light: #22222e;
-      --text-primary: #e4e4e7;
-      --text-secondary: #71717a;
-      --text-muted: #52525b;
-      --accent: #0066FF;
-      --accent-hover: #0052cc;
-      --accent-dim: rgba(0,102,255,0.12);
-      --success: #00E676;
-      --success-dim: rgba(0,230,118,0.12);
-      --warning: #FF9800;
-      --warning-dim: rgba(255,152,0,0.12);
-      --error: #FF5252;
-      --error-dim: rgba(255,82,82,0.12);
-      --purple: #9c6afe;
+      --bg-base: #0c0c11;
+      --bg-card: #13131a;
+      --bg-card-hover: #181822;
+      --border: #1c1c2a;
+      --border-light: #252535;
+      --text-primary: #eeeef0;
+      --text-secondary: #6e6e80;
+      --text-muted: #48485a;
+      --accent: #FF6B35;
+      --accent-hover: #E85A1F;
+      --accent-dim: rgba(255, 107, 53, 0.12);
+      --accent-glow: rgba(255, 107, 53, 0.25);
+      --success: #10B981;
+      --success-dim: rgba(16, 185, 129, 0.12);
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --warning: #ffaa00;
+      --warning-dim: rgba(255,170,0,0.12);
+      --error: #ff4d6d;
+      --error-dim: rgba(255,77,109,0.12);
+      --purple: #6366F1;
+      --purple-dim: rgba(99,102,241,0.13);
       --sidebar-width: 220px;
       --header-height: 0px;
+      /* Gradient tokens */
+      --grad-accent: linear-gradient(135deg, #FF6B35 0%, #E85A1F 100%);
+      --grad-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      --grad-warn: linear-gradient(135deg, #ffaa00 0%, #ff6b00 100%);
+      --grad-purple: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+      --grad-card: linear-gradient(160deg, #16161f 0%, #13131a 100%);
     }
 
     html, body { height: 100%; }
@@ -46,44 +55,61 @@
     /* ── Login overlay ── */
     #login-overlay {
       position: fixed; inset: 0; z-index: 1000;
-      background: var(--bg-base);
+      background: radial-gradient(ellipse at 50% 40%, rgba(255,107,53,0.08) 0%, var(--bg-base) 70%);
       display: flex; align-items: center; justify-content: center;
     }
     .login-box {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 40px;
-      width: 360px;
+      border-radius: 16px;
+      padding: 48px;
+      width: 380px;
       text-align: center;
+      box-shadow: 0 0 60px rgba(255,107,53,0.06), 0 20px 40px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    /* Decorative top-edge glow on login card */
+    .login-box::before {
+      content: '';
+      position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,107,53,0.6), transparent);
     }
     .login-box .logo-mark {
-      width: 48px; height: 48px; border-radius: 10px;
-      background: var(--accent); display: inline-flex;
-      align-items: center; justify-content: center;
-      font-size: 22px; font-weight: 700; color: #fff;
-      margin-bottom: 20px;
+      width: 56px; height: 56px; border-radius: 14px;
+      background: linear-gradient(135deg, #FF6B35, #E85A1F);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 800; color: white;
+      margin: 0 auto 20px;
+      box-shadow: 0 4px 16px rgba(255,107,53,0.3);
     }
-    .login-box h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-    .login-box p { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; }
+    .login-box h1 { font-size: 21px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.4px; }
+    .login-box p { color: var(--text-secondary); font-size: 13px; margin-bottom: 28px; }
     .login-box input {
-      width: 100%; background: var(--bg-base);
+      width: 100%; background: rgba(255,255,255,0.04);
       border: 1px solid var(--border-light);
-      border-radius: 8px; padding: 10px 14px;
+      border-radius: 9px; padding: 11px 14px;
       color: var(--text-primary); font-size: 14px;
       font-family: inherit; margin-bottom: 12px;
-      transition: border-color 0.15s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .login-box input:focus { outline: none; border-color: var(--accent); }
+    .login-box input:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
     .login-box .btn-primary {
-      width: 100%; background: var(--accent);
-      border: none; border-radius: 8px;
-      padding: 10px; color: #fff;
+      width: 100%; background: linear-gradient(135deg, #FF6B35, #E85A1F);
+      border: none; border-radius: 9px;
+      padding: 11px; color: #fff;
       font-size: 14px; font-weight: 600;
       font-family: inherit; cursor: pointer;
-      transition: background 0.15s;
+      transition: opacity 0.15s, transform 0.12s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(255,107,53,0.25);
     }
-    .login-box .btn-primary:hover { background: var(--accent-hover); }
+    .login-box .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(255,107,53,0.35);
+    }
+    .login-box .btn-primary:active { transform: translateY(0); }
     #login-error { color: var(--error); font-size: 12px; margin-top: 10px; display: none; }
 
     /* ── App shell ── */
@@ -99,7 +125,7 @@
     .sidebar {
       width: var(--sidebar-width);
       min-width: var(--sidebar-width);
-      background: var(--bg-card);
+      background: #0b0b14;
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
@@ -117,14 +143,15 @@
     }
     .sidebar-logo .mark {
       width: 30px; height: 30px; border-radius: 7px;
-      background: var(--accent); display: flex;
-      align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700; color: #fff;
+      background: var(--grad-accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #fff;
       flex-shrink: 0;
+      box-shadow: 0 0 12px rgba(255,107,53,0.4);
     }
     .sidebar-logo .name {
       font-size: 14px; font-weight: 700; color: var(--text-primary);
-      letter-spacing: -0.2px;
+      letter-spacing: -0.3px;
     }
     .sidebar-logo .version {
       font-size: 10px; color: var(--text-muted);
@@ -149,20 +176,23 @@
       color: var(--text-secondary);
       text-decoration: none;
       font-size: 13px; font-weight: 500;
-      transition: background 0.12s, color 0.12s;
+      transition: background 0.15s, color 0.15s;
       cursor: pointer;
       border: none; background: none;
       width: 100%; text-align: left;
       font-family: inherit;
+      position: relative;
     }
-    .nav-item svg { flex-shrink: 0; opacity: 0.7; }
-    .nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .nav-item svg { flex-shrink: 0; opacity: 0.6; transition: opacity 0.15s; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
     .nav-item:hover svg { opacity: 1; }
     .nav-item.active {
       background: var(--accent-dim);
       color: var(--accent);
+      border-left: 3px solid var(--accent);
+      padding-left: 9px;
     }
-    .nav-item.active svg { opacity: 1; }
+    .nav-item.active svg { opacity: 1; color: var(--accent); }
 
     .sidebar-footer {
       padding: 14px 16px;
@@ -174,12 +204,12 @@
     .live-dot {
       width: 7px; height: 7px; border-radius: 50%;
       background: var(--success);
-      animation: pulse-dot 2s infinite;
+      animation: pulse-dot 2.5s ease-in-out infinite;
       flex-shrink: 0;
     }
     @keyframes pulse-dot {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
-      50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(0,230,118,0); }
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--success-glow); }
+      50% { opacity: 0.8; box-shadow: 0 0 0 5px transparent; }
     }
 
     /* ── Main content ── */
@@ -189,6 +219,16 @@
       overflow-x: hidden;
       height: 100vh;
       background: var(--bg-base);
+      position: relative;
+    }
+    .content::before {
+      content: '';
+      position: fixed;
+      top: -20%; right: -10%;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,107,53,0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
     }
 
     .page-header {
@@ -197,75 +237,99 @@
       display: flex; align-items: flex-start;
       justify-content: space-between; gap: 16px;
     }
-    .page-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
-    .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .page-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
 
     .page-body { padding: 0 28px 28px; }
 
     /* ── Buttons ── */
     .btn {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 14px; border-radius: 7px;
-      font-size: 13px; font-weight: 500;
+      padding: 7px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 600;
       font-family: inherit; cursor: pointer;
-      border: none; transition: background 0.12s, opacity 0.12s;
+      border: none; transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
       white-space: nowrap;
     }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: var(--accent-hover); }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary {
+      background: linear-gradient(135deg, #FF6B35, #E85A1F);
+      color: white;
+      transition: all 0.15s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255,107,53,0.25);
+    }
     .btn-secondary {
-      background: var(--bg-card);
+      background: rgba(255,255,255,0.05);
       border: 1px solid var(--border-light);
       color: var(--text-secondary);
     }
-    .btn-secondary:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: var(--border-light);
+      color: var(--text-primary);
+    }
     .btn-ghost { background: transparent; color: var(--text-secondary); }
-    .btn-ghost:hover { color: var(--text-primary); }
-    .btn-danger { background: var(--error-dim); color: var(--error); border: 1px solid rgba(255,82,82,0.2); }
-    .btn-danger:hover { background: rgba(255,82,82,0.2); }
+    .btn-ghost:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+    .btn-danger {
+      background: var(--error-dim); color: var(--error);
+      border: 1px solid rgba(255,77,109,0.25);
+    }
+    .btn-danger:hover { background: rgba(255,77,109,0.22); }
     .btn-sm { padding: 5px 10px; font-size: 12px; }
     .btn-icon { padding: 6px; }
 
     /* ── Cards ── */
     .card {
-      background: var(--bg-card);
+      background: var(--grad-card);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 20px;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     .card-sm { padding: 14px 16px; }
-    .card:hover { border-color: var(--border-light); }
+    .card:hover {
+      border-color: var(--border-light);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    }
 
     /* ── KPI Cards ── */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
+      gap: 14px;
+      margin-bottom: 24px;
     }
     .kpi-card {
-      background: var(--bg-card);
+      background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-base) 100%);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
+      border-radius: 12px;
+      padding: 20px;
       position: relative;
       overflow: hidden;
-      transition: border-color 0.15s;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
-    .kpi-card { cursor: pointer; }
-    .kpi-card:hover { border-color: var(--border-light); transform: translateY(-1px); }
+    .kpi-card:hover {
+      border-color: var(--border-light);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
     .kpi-card .kpi-label {
-      font-size: 11px; font-weight: 600;
+      font-size: 10px; font-weight: 700;
       color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.6px;
-      margin-bottom: 8px;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 10px;
     }
     .kpi-card .kpi-value {
-      font-size: 26px; font-weight: 700;
+      font-size: 32px; font-weight: 800;
       color: var(--text-primary);
       letter-spacing: -0.5px;
       line-height: 1;
       margin-bottom: 5px;
+      font-variant-numeric: tabular-nums;
     }
     .kpi-card .kpi-sub {
       font-size: 11px; color: var(--text-secondary);
@@ -276,9 +340,17 @@
     }
     .kpi-card .kpi-trend.up { color: var(--success); }
     .kpi-card .kpi-trend.down { color: var(--error); }
+    /* KPI accent: top colored stripe (more visible than bottom) */
     .kpi-accent-bar {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      height: 2px;
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    /* Colored glow swatch in top-right corner */
+    .kpi-glow-orb {
+      position: absolute; top: -20px; right: -20px;
+      width: 80px; height: 80px; border-radius: 50%;
+      opacity: 0.12;
+      pointer-events: none;
     }
 
     /* ── Section heading ── */
@@ -288,8 +360,8 @@
       margin-bottom: 14px;
     }
     .section-title {
-      font-size: 14px; font-weight: 600;
-      color: var(--text-primary);
+      font-size: 14px; font-weight: 700;
+      color: var(--text-primary); letter-spacing: -0.2px;
     }
     .section-sub {
       font-size: 12px; color: var(--text-secondary);
@@ -304,40 +376,46 @@
     .mb-20 { margin-bottom: 20px; }
 
     /* ── Funnel ── */
-    .funnel-wrap { margin-bottom: 20px; }
+    .funnel-wrap { margin-bottom: 24px; }
     .funnel-stages {
-      display: flex; align-items: stretch; gap: 0;
-      height: 56px; border-radius: 8px; overflow: hidden;
+      display: flex; align-items: flex-end; gap: 3px;
+      height: 72px; overflow: hidden;
     }
     .funnel-stage {
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; gap: 2px;
       position: relative; flex: 1;
-      transition: filter 0.15s;
+      border-radius: 6px;
+      transition: all 0.2s;
       cursor: pointer;
     }
-    .funnel-stage:hover { filter: brightness(1.15); }
+    .funnel-stage:hover { transform: scaleY(1.08); filter: brightness(1.15); }
     .funnel-stage .f-count {
-      font-size: 15px; font-weight: 700; color: #fff;
-      line-height: 1;
+      font-size: 15px; font-weight: 800; color: #fff;
+      line-height: 1; letter-spacing: -0.3px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
     .funnel-stage .f-label {
-      font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.75);
-      text-transform: uppercase; letter-spacing: 0.5px;
+      font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.8);
+      text-transform: uppercase; letter-spacing: 0.6px;
     }
-    .funnel-arrow {
-      position: absolute; right: -1px; top: 0; bottom: 0;
-      width: 12px; z-index: 1;
-      pointer-events: none;
+    /* Chevron divider between stages */
+    .funnel-chevron {
+      color: var(--border-light);
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+      opacity: 0.6;
+      user-select: none;
     }
     .funnel-rates {
-      display: flex; gap: 0; margin-top: 6px;
+      display: flex; gap: 0; margin-top: 8px;
     }
     .funnel-rate {
       flex: 1; text-align: center;
       font-size: 10px; color: var(--text-muted);
     }
-    .funnel-rate .rate-val { color: var(--text-secondary); font-weight: 600; }
+    .funnel-rate .rate-val { color: var(--text-secondary); font-weight: 700; }
 
     /* ── Chart containers ── */
     .chart-wrap { position: relative; }
@@ -350,37 +428,42 @@
     }
     .activity-item {
       display: flex; align-items: flex-start; gap: 10px;
-      padding: 9px 0;
-      border-bottom: 1px solid var(--border);
-      animation: slide-in 0.25s ease;
+      padding: 10px 8px;
+      border-radius: 7px;
+      margin-bottom: 2px;
+      animation: slide-in 0.28s cubic-bezier(0.2, 0, 0.4, 1);
+      transition: background 0.15s;
     }
-    .activity-item:last-child { border-bottom: none; }
+    .activity-item:hover { background: rgba(255,255,255,0.03); }
     @keyframes slide-in {
-      from { opacity: 0; transform: translateY(-8px); }
+      from { opacity: 0; transform: translateY(-10px); }
       to { opacity: 1; transform: translateY(0); }
     }
     .activity-icon {
-      width: 28px; height: 28px; border-radius: 7px;
+      width: 30px; height: 30px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
     .activity-body { flex: 1; min-width: 0; }
-    .activity-text { font-size: 12px; color: var(--text-primary); line-height: 1.4; }
-    .activity-text strong { font-weight: 600; }
-    .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .activity-text { font-size: 12px; color: var(--text-primary); line-height: 1.45; }
+    .activity-text strong { font-weight: 600; color: #c8c8d4; }
+    .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
     /* ── Top leads ── */
     .lead-item {
       display: flex; align-items: center; gap: 10px;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
+      padding: 9px 8px;
+      border-radius: 7px;
+      margin-bottom: 2px;
+      transition: background 0.15s;
     }
-    .lead-item:last-child { border-bottom: none; }
+    .lead-item:hover { background: rgba(255,255,255,0.04); cursor: pointer; }
     .lead-avatar {
-      width: 32px; height: 32px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 12px; font-weight: 700; color: #fff;
       flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
     .lead-info { flex: 1; min-width: 0; }
     .lead-name { font-size: 13px; font-weight: 500; color: var(--text-primary); truncate: ellipsis; }
@@ -413,22 +496,23 @@
       vertical-align: middle;
     }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--bg-card-hover); }
+    tr:hover td { background: rgba(255,255,255,0.028); }
     tr.clickable { cursor: pointer; }
+    tr.clickable:hover td:first-child { color: var(--accent); transition: color 0.15s; }
 
     /* ── Badges ── */
     .badge {
       display: inline-flex; align-items: center;
       padding: 2px 8px; border-radius: 5px;
-      font-size: 11px; font-weight: 600;
-      white-space: nowrap;
+      font-size: 11px; font-weight: 700;
+      white-space: nowrap; letter-spacing: 0.1px;
     }
-    .badge-blue { background: rgba(0,102,255,0.15); color: #4d94ff; }
+    .badge-blue { background: rgba(255,107,53,0.16); color: var(--accent); }
     .badge-green { background: var(--success-dim); color: var(--success); }
-    .badge-orange { background: var(--warning-dim); color: var(--warning); }
-    .badge-red { background: var(--error-dim); color: var(--error); }
+    .badge-orange { background: rgba(255,170,0,0.14); color: var(--warning); }
+    .badge-red { background: var(--error-dim); color: #ff7a94; }
     .badge-gray { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
-    .badge-purple { background: rgba(156,106,254,0.15); color: var(--purple); }
+    .badge-purple { background: var(--purple-dim); color: var(--purple); }
 
     /* ── Search / filter bar ── */
     .filter-bar {
@@ -444,12 +528,12 @@
       color: var(--text-muted); pointer-events: none;
     }
     .search-input, .filter-select {
-      background: var(--bg-card);
+      background: rgba(255,255,255,0.04);
       border: 1px solid var(--border-light);
       border-radius: 8px;
       color: var(--text-primary);
       font-size: 13px; font-family: inherit;
-      transition: border-color 0.15s;
+      transition: border-color 0.18s, box-shadow 0.18s;
     }
     .search-input {
       width: 100%; padding: 8px 12px 8px 34px;
@@ -457,12 +541,16 @@
     .filter-select {
       padding: 8px 28px 8px 12px;
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e6e80' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 8px center;
       cursor: pointer;
     }
-    .search-input:focus, .filter-select:focus { outline: none; border-color: var(--accent); }
+    .search-input:focus, .filter-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
 
     /* ── Pagination ── */
     .pagination {
@@ -489,20 +577,23 @@
     .detail-panel {
       position: fixed; top: 0; right: 0; bottom: 0;
       width: 560px; max-width: 95vw;
-      background: var(--bg-card);
-      border-left: 1px solid var(--border);
+      background: #0d0d18;
+      border-left: 1px solid var(--border-light);
       transform: translateX(100%);
-      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+      transition: transform 0.3s cubic-bezier(0.3,0,0.2,1);
       z-index: 200;
       display: flex; flex-direction: column;
       overflow: hidden;
+      box-shadow: -8px 0 40px rgba(0,0,0,0.6);
     }
     .detail-panel.open { transform: translateX(0); }
     .panel-backdrop {
       position: fixed; inset: 0; z-index: 199;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
       opacity: 0; pointer-events: none;
-      transition: opacity 0.28s;
+      transition: opacity 0.3s;
     }
     .panel-backdrop.open { opacity: 1; pointer-events: all; }
     .panel-header {
@@ -650,33 +741,38 @@
     /* ── Modal ── */
     .modal-backdrop {
       position: fixed; inset: 0; z-index: 300;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
       opacity: 0; pointer-events: none;
-      transition: opacity 0.2s;
+      transition: opacity 0.22s;
     }
     .modal-backdrop.open { opacity: 1; pointer-events: all; }
     .modal {
-      background: var(--bg-card);
+      background: #11111c;
       border: 1px solid var(--border-light);
-      border-radius: 12px; padding: 24px;
+      border-radius: 14px; padding: 26px;
       width: 480px; max-width: 95vw;
-      transform: scale(0.96);
-      transition: transform 0.2s;
+      transform: scale(0.95) translateY(8px);
+      transition: transform 0.22s cubic-bezier(0.2,0,0.3,1);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
     }
-    .modal-backdrop.open .modal { transform: scale(1); }
+    .modal-backdrop.open .modal { transform: scale(1) translateY(0); }
     .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
     .form-field { margin-bottom: 14px; }
     .form-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; display: block; }
     .form-input, .form-textarea, .form-select {
-      width: 100%; background: var(--bg-base);
+      width: 100%; background: rgba(255,255,255,0.04);
       border: 1px solid var(--border-light);
-      border-radius: 7px; padding: 9px 12px;
+      border-radius: 8px; padding: 9px 12px;
       color: var(--text-primary); font-size: 13px;
-      font-family: inherit; transition: border-color 0.15s;
+      font-family: inherit; transition: border-color 0.18s, box-shadow 0.18s;
     }
     .form-input:focus, .form-textarea:focus, .form-select:focus {
-      outline: none; border-color: var(--accent);
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
     }
     .form-textarea { min-height: 100px; resize: vertical; }
     .form-select { appearance: none; cursor: pointer; }
@@ -692,9 +788,9 @@
 
     /* ── Loading skeleton ── */
     .skeleton {
-      background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+      background: linear-gradient(90deg, #13131a 25%, #1e1e2a 50%, #13131a 75%);
       background-size: 200% 100%;
-      animation: shimmer 1.4s infinite;
+      animation: shimmer 1.6s ease-in-out infinite;
       border-radius: 6px;
     }
     @keyframes shimmer {
@@ -741,21 +837,22 @@
 
     /* ── Toast notifications ── */
     #toast-container {
-      position: fixed; bottom: 20px; right: 20px;
+      position: fixed; bottom: 24px; right: 24px;
       z-index: 9999; display: flex; flex-direction: column; gap: 8px;
     }
     .toast {
-      background: var(--bg-card); border: 1px solid var(--border-light);
-      border-radius: 8px; padding: 10px 14px;
+      background: #16161f;
+      border: 1px solid var(--border-light);
+      border-radius: 10px; padding: 11px 16px;
       font-size: 13px; color: var(--text-primary);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
       display: flex; align-items: center; gap: 8px;
-      animation: toast-in 0.25s ease;
-      min-width: 240px;
+      animation: toast-in 0.28s cubic-bezier(0.2,0,0.3,1);
+      min-width: 260px; font-weight: 500;
     }
     @keyframes toast-in {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
     .toast.success { border-left: 3px solid var(--success); }
     .toast.error { border-left: 3px solid var(--error); }
@@ -767,6 +864,20 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Entrance animations ── */
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .kpi-card { animation: fade-up 0.4s ease forwards; opacity: 0; }
+    /* Stagger each card */
+    .kpi-card:nth-child(1) { animation-delay: 0s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.06s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.12s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.18s; }
+    .kpi-card:nth-child(5) { animation-delay: 0.24s; }
+    .kpi-card:nth-child(6) { animation-delay: 0.30s; }
 
     /* ── Truncate ── */
     .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -802,7 +913,7 @@
   <div class="login-box">
     <div class="logo-mark">SE</div>
     <h1>Sales Engine</h1>
-    <p>Mission control for Talkspresso outreach</p>
+    <p>Where strategy meets execution</p>
     <input type="password" id="token-input" placeholder="Password" autocomplete="current-password">
     <button class="btn-primary" onclick="authenticate()">Log In</button>
     <div id="login-error">Wrong password. Try again.</div>
@@ -939,7 +1050,7 @@ function initials(name, email) {
 }
 
 const AVATAR_COLORS = [
-  '#0066FF','#9c6afe','#00E676','#FF9800','#FF5252',
+  '#0066FF','#6366F1','#10B981','#FF9800','#FF5252',
   '#06b6d4','#f59e0b','#8b5cf6','#ec4899','#10b981'
 ];
 
@@ -1167,7 +1278,7 @@ async function renderOverview() {
     <div class="page-header">
       <div>
         <div class="page-title">Overview</div>
-        <div class="page-subtitle">Mission control — live pipeline metrics</div>
+        <div class="page-subtitle">Real-time conversion metrics</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn btn-secondary btn-sm" onclick="refreshOverview()">
@@ -1302,14 +1413,14 @@ function renderKPIs(status, funnel) {
       label: 'Emails Sent',
       value: totalSent,
       sub: `${status.today?.sent || 0} today`,
-      color: '#9c6afe',
+      color: '#6366F1',
       click: 'contacted',
     },
     {
       label: 'Open Rate',
       value: openRate + '%',
       sub: 'estimated from replies',
-      color: '#00E676',
+      color: '#10B981',
       isStr: true,
       click: 'contacted',
     },
@@ -1317,7 +1428,7 @@ function renderKPIs(status, funnel) {
       label: 'Reply Rate',
       value: replyRate.toFixed(1) + '%',
       sub: `${totalReplied} total replies`,
-      color: '#00E676',
+      color: '#10B981',
       isStr: true,
       click: 'replied',
     },
@@ -1332,14 +1443,15 @@ function renderKPIs(status, funnel) {
       label: 'Converted',
       value: funnel.funnel.converted || 0,
       sub: pct(funnel.funnel.converted || 0, signedUp) + ' of signups',
-      color: '#FF5252',
+      color: '#10B981',
       click: 'converted',
     },
   ];
 
   document.getElementById('kpi-grid').innerHTML = kpis.map(k => `
     <div class="kpi-card" onclick="navigateToContacts('${k.click}')">
-      <div class="kpi-accent-bar" style="background:${k.color};opacity:0.6;"></div>
+      <div class="kpi-accent-bar" style="background:${k.color};"></div>
+      <div class="kpi-glow-orb" style="background:${k.color};"></div>
       <div class="kpi-label">${esc(k.label)}</div>
       <div class="kpi-value" data-val="${k.isStr ? '' : k.value}" data-str="${k.isStr ? k.value : ''}">
         ${k.isStr ? esc(k.value) : '0'}
@@ -1359,23 +1471,28 @@ function renderFunnel(funnel) {
   const f = funnel.funnel;
   const stages = [
     { label: 'Emailed', val: f.emailed, color: '#0066FF', click: 'contacted' },
-    { label: 'Opened', val: Math.round((f.emailed || 0) * 0.28), color: '#4d94ff', click: 'contacted' },
-    { label: 'Replied', val: f.replied, color: '#9c6afe', click: 'replied' },
+    { label: 'Opened', val: Math.round((f.emailed || 0) * 0.28), color: '#818CF8', click: 'contacted' },
+    { label: 'Replied', val: f.replied, color: '#6366F1', click: 'replied' },
     { label: 'Signed Up', val: f.signed_up, color: '#FF9800', click: 'signed_up' },
-    { label: 'Booked', val: f.booked, color: '#00c853', click: 'booked' },
-    { label: 'Paid', val: f.converted, color: '#00E676', click: 'converted' },
+    { label: 'Booked', val: f.booked, color: '#059669', click: 'booked' },
+    { label: 'Paid', val: f.converted, color: '#10B981', click: 'converted' },
   ];
 
   const funnelEl = document.getElementById('funnel-stages');
   if (!funnelEl) return;
 
+  // Taper heights: each stage decreases by 6px for visual funnel effect
+  const funnelHeights = stages.map((_, i) => 72 - i * 6);
+
   funnelEl.innerHTML = stages.map((s, i) => {
-    const opacity = 1 - (i * 0.06);
+    const h = funnelHeights[i] || 42;
+    const isLast = i === stages.length - 1;
+    const chevron = isLast ? '' : `<span class="funnel-chevron">›</span>`;
     return `
-      <div class="funnel-stage" style="background:${s.color};opacity:${opacity};" title="${s.label}: ${s.val}" onclick="navigateToContacts('${s.click}')">
+      <div class="funnel-stage" style="background:${s.color};height:${h}px;" title="${s.label}: ${s.val}" onclick="navigateToContacts('${s.click}')">
         <span class="f-count">${(s.val || 0).toLocaleString()}</span>
         <span class="f-label">${s.label}</span>
-      </div>
+      </div>${chevron}
     `;
   }).join('');
 
@@ -1405,6 +1522,16 @@ function renderDailyChart(data) {
 
   if (chartInstances['daily']) chartInstances['daily'].destroy();
 
+  // Build gradient fills using canvas context
+  const ctx = canvas.getContext('2d');
+
+  function makeGrad(ctx, colorTop, colorBot) {
+    const g = ctx.createLinearGradient(0, 0, 0, 200);
+    g.addColorStop(0, colorTop);
+    g.addColorStop(1, colorBot);
+    return g;
+  }
+
   chartInstances['daily'] = new Chart(canvas, {
     type: 'line',
     data: {
@@ -1413,58 +1540,73 @@ function renderDailyChart(data) {
         {
           label: 'Sent',
           data: rows.map(r => parseInt(r.sent) || 0),
-          borderColor: '#0066FF',
-          backgroundColor: 'rgba(0,102,255,0.08)',
+          borderColor: '#3b7eff',
+          backgroundColor: makeGrad(ctx, 'rgba(59,126,255,0.22)', 'rgba(59,126,255,0.01)'),
           fill: true,
-          tension: 0.4,
+          tension: 0.45,
           pointRadius: 0,
-          borderWidth: 2,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#3b7eff',
+          borderWidth: 2.5,
         },
         {
           label: 'Replied',
           data: rows.map(r => parseInt(r.replied) || 0),
-          borderColor: '#00E676',
-          backgroundColor: 'rgba(0,230,118,0.08)',
+          borderColor: '#10B981',
+          backgroundColor: makeGrad(ctx, 'rgba(16,185,129,0.18)', 'rgba(16,185,129,0.01)'),
           fill: true,
-          tension: 0.4,
+          tension: 0.45,
           pointRadius: 0,
-          borderWidth: 2,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#10B981',
+          borderWidth: 2.5,
         },
         {
           label: 'Bounced',
           data: rows.map(r => parseInt(r.bounced) || 0),
-          borderColor: '#FF5252',
-          backgroundColor: 'rgba(255,82,82,0.06)',
+          borderColor: '#ff4d6d',
+          backgroundColor: makeGrad(ctx, 'rgba(255,77,109,0.12)', 'rgba(255,77,109,0.01)'),
           fill: true,
-          tension: 0.4,
+          tension: 0.45,
           pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: '#ff4d6d',
           borderWidth: 1.5,
+          borderDash: [4, 3],
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          labels: { color: '#71717a', font: { family: 'Inter', size: 11 }, boxWidth: 10 },
+          labels: { color: '#6e6e80', font: { family: 'Inter', size: 11 }, boxWidth: 10, usePointStyle: true, pointStyle: 'circle' },
         },
         tooltip: {
-          backgroundColor: '#111118',
-          borderColor: '#1a1a24',
+          backgroundColor: '#13131e',
+          borderColor: '#252535',
           borderWidth: 1,
-          titleColor: '#e4e4e7',
-          bodyColor: '#71717a',
+          titleColor: '#eeeef0',
+          bodyColor: '#6e6e80',
+          padding: 10,
+          cornerRadius: 8,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}`,
+          },
         },
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255,255,255,0.03)' },
-          ticks: { color: '#52525b', font: { size: 10, family: 'Inter' }, maxTicksLimit: 10 },
+          grid: { color: 'rgba(255,255,255,0.025)', drawBorder: false },
+          ticks: { color: '#48485a', font: { size: 10, family: 'Inter' }, maxTicksLimit: 10 },
+          border: { display: false },
         },
         y: {
-          grid: { color: 'rgba(255,255,255,0.03)' },
-          ticks: { color: '#52525b', font: { size: 10, family: 'Inter' } },
+          grid: { color: 'rgba(255,255,255,0.025)', drawBorder: false },
+          ticks: { color: '#48485a', font: { size: 10, family: 'Inter' } },
+          border: { display: false },
           beginAtZero: true,
         },
       },
@@ -1502,8 +1644,8 @@ function renderActivityFeed(activity) {
 
   const iconMap = {
     sent: { icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`, bg: 'rgba(0,102,255,0.15)', color: '#0066FF' },
-    replied: { icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>`, bg: 'rgba(0,230,118,0.15)', color: '#00E676' },
-    opened: { icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`, bg: 'rgba(156,106,254,0.15)', color: '#9c6afe' },
+    replied: { icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>`, bg: 'rgba(16,185,129,0.15)', color: '#10B981' },
+    opened: { icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`, bg: 'rgba(99,102,241,0.15)', color: '#6366F1' },
   };
 
   el.innerHTML = events.map(e => {
@@ -1574,7 +1716,7 @@ async function renderContacts() {
       <div class="filter-bar">
         <div class="search-wrap">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="c-search" placeholder="Search name, email, company…" oninput="debounceContactSearch()" value="${esc(contactsState.search)}">
+          <input class="search-input" id="c-search" placeholder="Find anyone…" oninput="debounceContactSearch()" value="${esc(contactsState.search)}">
         </div>
         <select class="filter-select" id="c-status" onchange="filterContacts()" style="width:130px;">
           <option value="">All statuses</option>
@@ -1898,7 +2040,7 @@ async function renderSequences() {
     <div class="page-header">
       <div>
         <div class="page-title">Sequences</div>
-        <div class="page-subtitle">Email automation flows</div>
+        <div class="page-subtitle">Automated email flows running 24/7</div>
       </div>
     </div>
     <div class="page-body">
@@ -2048,7 +2190,7 @@ async function renderSends() {
     <div class="page-header">
       <div>
         <div class="page-title">Sends</div>
-        <div class="page-subtitle" id="sends-count">Loading…</div>
+        <div class="page-subtitle" id="sends-count">Every email tracked</div>
       </div>
     </div>
     <div class="page-body">
@@ -2102,7 +2244,7 @@ async function loadSends() {
     sendsState.total = data.total;
 
     const sub = document.getElementById('sends-count');
-    if (sub) sub.textContent = `${data.total.toLocaleString()} emails`;
+    if (sub) sub.textContent = `${data.total.toLocaleString()} emails tracked`;
 
     const tbody = document.getElementById('sends-tbody');
     if (!tbody) return;
@@ -2150,7 +2292,7 @@ async function renderCompanies() {
     <div class="page-header">
       <div>
         <div class="page-title">Companies</div>
-        <div class="page-subtitle">Organizations in your pipeline</div>
+        <div class="page-subtitle">Target accounts in your pipeline</div>
       </div>
     </div>
     <div class="page-body">
@@ -2246,7 +2388,7 @@ async function renderTemplates() {
     <div class="page-header">
       <div>
         <div class="page-title">Templates</div>
-        <div class="page-subtitle">Email templates and sequences</div>
+        <div class="page-subtitle">Tested email playbooks</div>
       </div>
     </div>
     <div class="page-body">
@@ -2339,7 +2481,7 @@ async function renderLists() {
     <div class="page-header">
       <div>
         <div class="page-title">Lists</div>
-        <div class="page-subtitle">Contact segments and groups</div>
+        <div class="page-subtitle">Smart segments and groups</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="openCreateListModal()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
