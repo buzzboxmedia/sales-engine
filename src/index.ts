@@ -79,6 +79,16 @@ app.get('/dashboard', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// Password login — validates password, returns API token
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.DASHBOARD_PASSWORD) {
+    res.json({ token: process.env.API_TOKEN });
+  } else {
+    res.status(401).json({ error: 'Wrong password' });
+  }
+});
+
 // API routes (require auth)
 app.use('/api/contacts', authMiddleware, contactRoutes);
 app.use('/api/sends', authMiddleware, sendRoutes);

@@ -802,9 +802,9 @@
     <div class="logo-mark">SE</div>
     <h1>Sales Engine</h1>
     <p>Mission control for Talkspresso outreach</p>
-    <input type="password" id="token-input" placeholder="API Token" autocomplete="current-password">
-    <button class="btn-primary" onclick="authenticate()">Connect</button>
-    <div id="login-error">Invalid token. Try again.</div>
+    <input type="password" id="token-input" placeholder="Password" autocomplete="current-password">
+    <button class="btn-primary" onclick="authenticate()">Log In</button>
+    <div id="login-error">Wrong password. Try again.</div>
   </div>
 </div>
 
@@ -1001,14 +1001,35 @@ function countUp(el, target, duration = 600) {
 
 let TOKEN = localStorage.getItem('se_token') || '';
 
-function authenticate() {
+async function authenticate() {
   const val = document.getElementById('token-input').value.trim();
   if (!val) return;
-  TOKEN = val;
-  localStorage.setItem('se_token', TOKEN);
-  document.getElementById('login-overlay').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  initApp();
+  const btn = document.querySelector('.login-box .btn-primary');
+  btn.textContent = 'Logging in...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: val }),
+    });
+    if (!res.ok) {
+      document.getElementById('login-error').style.display = 'block';
+      btn.textContent = 'Log In';
+      btn.disabled = false;
+      return;
+    }
+    const data = await res.json();
+    TOKEN = data.token;
+    localStorage.setItem('se_token', TOKEN);
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+  } catch (e) {
+    document.getElementById('login-error').style.display = 'block';
+    btn.textContent = 'Log In';
+    btn.disabled = false;
+  }
 }
 
 document.getElementById('token-input').addEventListener('keydown', e => {
