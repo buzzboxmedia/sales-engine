@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Op, fn, col, literal } from 'sequelize';
 import { sequelize } from '../db.js';
-import { Contact, Send, Conversion } from '../models/index.js';
+import { Contact, Send, Conversion, Sequence } from '../models/index.js';
 
 const router = Router();
 
@@ -133,6 +133,146 @@ router.get('/status', async (req: Request, res: Response) => {
     total_contacts: totalContacts,
     suppressed: suppressedCount,
   });
+});
+
+// Schedule: queued sends + projected future sends for next 30 days
+router.get('/schedule', async (req: Request, res: Response) => {
+  const { days = '30' } = req.query;
+  const safeDays = Math.max(1, Math.min(90, parseInt(days as string) || 30));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const rangeEnd = new Date(today);
+  rangeEnd.setDate(rangeEnd.getDate() + safeDays);
+
+  // --- 1. Queued sends (already in the queue) ---
+  const queuedSends = await Send.findAll({
+    where: {
+      status: 'queued',
+      created_at: { [Op.lte]: rangeEnd },
+    },
+    include: [
+      { model: Contact, as: 'contact', attributes: ['id', 'name', 'email'] },
+      { model: Sequence, as: 'sequence', attributes: ['id', 'name'] },
+    ],
+  });
+
+  // --- 2. Projected sends: find active 'sent' sends with a next step pending ---
+  // Contacts not in a terminal status
+  const terminalStatuses = ['replied', 'interested', 'not_interested', 'signed_up', 'booked', 'converted', 'unsubscribed', 'bounced'];
+
+  const sentNotReplied = await Send.findAll({
+    where: {
+      status: 'sent',
+      sequence_id: { [Op.ne]: null },
+      replied_at: null,
+    },
+    include: [
+      {
+        model: Contact,
+        as: 'contact',
+        attributes: ['id', 'name', 'email', 'status', 'suppressed'],
+        where: {
+          suppressed: false,
+          status: { [Op.notIn]: terminalStatuses },
+        },
+      },
+      { model: Sequence, as: 'sequence', attributes: ['id', 'name', 'steps', 'status'] },
+    ],
+  });
+
+  // Build a set of (contact_id, sequence_id, step_number) that already have a queued/sent record
+  const existingKeys = new Set<string>();
+  const allExisting = await Send.findAll({
+    where: {
+      status: { [Op.in]: ['queued', 'sent'] },
+      sequence_id: { [Op.ne]: null },
+    },
+    attributes: ['contact_id', 'sequence_id', 'step_number'],
+  });
+  for (const s of allExisting) {
+    existingKeys.add(`${s.contact_id}:${s.sequence_id}:${s.step_number}`);
+  }
+
+  type ScheduleSend = {
+    date: string;
+    contact_name: string;
+    contact_email: string;
+    sequence_name: string | null;
+    step_number: number;
+    subject: string;
+    status: 'queued' | 'projected';
+  };
+
+  const projected: ScheduleSend[] = [];
+  const dayMap = new Map<string, ScheduleSend[]>();
+
+  for (const send of sentNotReplied) {
+    if (!send.sequence_id || !send.step_number || !send.sent_at) continue;
+
+    const contact = (send as any).contact;
+    const sequence = (send as any).sequence;
+    if (!contact || !sequence || sequence.status !== 'active') continue;
+
+    const steps = sequence.steps as Array<{ step: number; delay_days: number; subject: string; body: string }>;
+    const nextStepNum = send.step_number + 1;
+    const nextStep = steps.find(s => s.step === nextStepNum);
+    if (!nextStep) continue;
+
+    // Skip if already queued or sent
+    const key = `${send.contact_id}:${send.sequence_id}:${nextStepNum}`;
+    if (existingKeys.has(key)) continue;
+
+    // Calculate projected fire date
+    const projectedDate = new Date(send.sent_at);
+    projectedDate.setDate(projectedDate.getDate() + nextStep.delay_days);
+    projectedDate.setHours(0, 0, 0, 0);
+
+    if (projectedDate < today || projectedDate >= rangeEnd) continue;
+
+    projected.push({
+      date: projectedDate.toISOString().slice(0, 10),
+      contact_name: contact.name || contact.email,
+      contact_email: contact.email,
+      sequence_name: sequence.name,
+      step_number: nextStepNum,
+      subject: nextStep.subject,
+      status: 'projected',
+    });
+  }
+
+  // --- 3. Group everything by date ---
+
+  for (const send of queuedSends) {
+    const contact = (send as any).contact;
+    const sequence = (send as any).sequence;
+    if (!contact) continue;
+
+    // Queued sends go on today (they fire as soon as processed)
+    const dateKey = today.toISOString().slice(0, 10);
+    if (!dayMap.has(dateKey)) dayMap.set(dateKey, []);
+    dayMap.get(dateKey)!.push({
+      date: dateKey,
+      contact_name: contact.name || contact.email,
+      contact_email: contact.email,
+      sequence_name: sequence?.name || null,
+      step_number: send.step_number || 1,
+      subject: send.subject,
+      status: 'queued',
+    });
+  }
+
+  for (const item of projected) {
+    if (!dayMap.has(item.date)) dayMap.set(item.date, []);
+    dayMap.get(item.date)!.push(item);
+  }
+
+  // Build sorted array of days with sends
+  const days_arr = Array.from(dayMap.entries())
+    .map(([date, sends]) => ({ date, sends }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  res.json({ days: days_arr });
 });
 
 export default router;

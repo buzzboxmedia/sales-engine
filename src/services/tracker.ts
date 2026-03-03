@@ -7,8 +7,34 @@ interface TrackMetadata {
   userAgent?: string;
 }
 
+// In-memory dedup cache: key → expiry timestamp
+// Prevents bot prefetch and email client scanning from inflating counts
+const dedupCache = new Map<string, number>();
+
+const OPEN_DEDUP_MS = 5 * 60 * 1000;  // 5 minutes
+const CLICK_DEDUP_MS = 30 * 1000;     // 30 seconds
+
+function isDuplicate(key: string, windowMs: number): boolean {
+  const now = Date.now();
+  const expiry = dedupCache.get(key);
+  if (expiry && now < expiry) return true;
+  dedupCache.set(key, now + windowMs);
+  return false;
+}
+
+// Periodically clean up expired dedup entries (every 10 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, expiry] of dedupCache) {
+    if (now >= expiry) dedupCache.delete(key);
+  }
+}, 10 * 60 * 1000);
+
 // Process an email open event
 export async function trackOpen(trackingId: string, metadata: TrackMetadata): Promise<void> {
+  // Dedup: ignore opens from the same tracking_id within 5 minutes
+  if (isDuplicate(`open:${trackingId}`, OPEN_DEDUP_MS)) return;
+
   const send = await Send.findOne({ where: { tracking_id: trackingId } });
   if (!send) return;
 
@@ -46,6 +72,9 @@ export async function trackOpen(trackingId: string, metadata: TrackMetadata): Pr
 
 // Process a link click event
 export async function trackClick(trackingId: string, url: string, metadata: TrackMetadata): Promise<void> {
+  // Dedup: ignore clicks from the same tracking_id+url within 30 seconds
+  if (isDuplicate(`click:${trackingId}:${url}`, CLICK_DEDUP_MS)) return;
+
   const send = await Send.findOne({ where: { tracking_id: trackingId } });
   if (!send) return;
 

@@ -71,8 +71,17 @@ function authMiddleware(req: express.Request, res: express.Response, next: expre
 // Static files
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
+// Rate limit tracking routes: 60 req/min per IP
+const trackingLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
 // Public tracking routes — no auth required, must be before auth middleware
-app.use('/t', trackRoutes);
+app.use('/t', trackingLimiter, trackRoutes);
 
 // Dashboard page (served without API auth, has its own token input)
 app.get('/dashboard', (_req, res) => {

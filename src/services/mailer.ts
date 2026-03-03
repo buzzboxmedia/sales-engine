@@ -1,19 +1,68 @@
 import nodemailer from 'nodemailer';
 import { createId } from '@paralleldrive/cuid2';
-import { SendingAccount, Send, Contact } from '../models/index.js';
+import { SendingAccount, Send, Contact, Sequence } from '../models/index.js';
 import { logActivity } from './activity.js';
 import { Op } from 'sequelize';
 
 const BASE_URL = process.env.BASE_URL || 'https://sales.talkspresso.com';
 
-// Inject tracking pixel + wrap links + append unsubscribe footer
-function injectTracking(html: string, trackingId: string): string {
-  // Wrap all href links except mailto: and our own /t/u/ unsubscribe links
-  const wrappedLinks = html.replace(
+// Check if a URL is a talkspresso.com destination
+function isTalkspressoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === 'talkspresso.com' || parsed.hostname.endsWith('.talkspresso.com');
+  } catch {
+    return false;
+  }
+}
+
+// Append UTM + se params to a talkspresso.com URL
+function appendTrackingParams(url: string, trackingId: string, sequenceName: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set('utm_source', 'sales_engine');
+    parsed.searchParams.set('utm_medium', 'email');
+    parsed.searchParams.set('utm_campaign', sequenceName);
+    parsed.searchParams.set('se', trackingId);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+// Strip HTML tags for plain text fallback
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '  - ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// Inject tracking pixel + wrap/param links + append unsubscribe footer
+function injectTracking(html: string, trackingId: string, sequenceName: string): string {
+  // For talkspresso.com links: append UTM params directly
+  // For all other links: wrap through /t/c/ redirect for tracking
+  const processedLinks = html.replace(
     /href="([^"]+)"/g,
     (_match, url: string) => {
       if (url.startsWith('mailto:') || url.includes('/t/u/')) {
         return `href="${url}"`;
+      }
+      if (isTalkspressoUrl(url)) {
+        return `href="${appendTrackingParams(url, trackingId, sequenceName)}"`;
       }
       return `href="${BASE_URL}/t/c/${trackingId}?url=${encodeURIComponent(url)}"`;
     },
@@ -27,10 +76,10 @@ function injectTracking(html: string, trackingId: string): string {
 <img src="${BASE_URL}/t/o/${trackingId}" width="1" height="1" style="display:none" alt="" />`;
 
   // Insert before </body> if present, otherwise append
-  if (wrappedLinks.includes('</body>')) {
-    return wrappedLinks.replace('</body>', `${footer}\n</body>`);
+  if (processedLinks.includes('</body>')) {
+    return processedLinks.replace('</body>', `${footer}\n</body>`);
   }
-  return wrappedLinks + footer;
+  return processedLinks + footer;
 }
 
 const DELAY_BETWEEN_SENDS_MS = 5000;
@@ -91,8 +140,18 @@ export async function sendEmail(send: Send): Promise<boolean> {
   const trackingId = createId();
   await send.update({ tracking_id: trackingId });
 
-  // Inject tracking pixel, wrap links, append unsubscribe footer
-  const trackedHtml = injectTracking(send.body, trackingId);
+  // Resolve sequence name for UTM campaign param
+  let sequenceName = 'default';
+  if (send.sequence_id) {
+    const sequence = await Sequence.findByPk(send.sequence_id);
+    if (sequence?.name) {
+      sequenceName = sequence.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '');
+    }
+  }
+
+  // Inject tracking pixel, process links, append unsubscribe footer
+  const trackedHtml = injectTracking(send.body, trackingId, sequenceName);
+  const plainText = htmlToPlainText(send.body) + `\n\nUnsubscribe: ${BASE_URL}/t/u/${trackingId}`;
 
   const transporter = getTransporter(account);
 
@@ -102,6 +161,7 @@ export async function sendEmail(send: Send): Promise<boolean> {
       to: contact.email,
       subject: send.subject,
       html: trackedHtml,
+      text: plainText,
     });
 
     await send.update({ status: 'sent', sent_at: new Date() });
