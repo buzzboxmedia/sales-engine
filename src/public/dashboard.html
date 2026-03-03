@@ -708,6 +708,19 @@
       padding: 4px;
     }
 
+    /* ── Mobile header ── */
+    .mobile-header {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 800;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      height: 48px;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+    }
+    .mobile-title { font-weight: 600; font-size: 15px; }
+
     /* ── Inline HTML editor ── */
     .editor-wrap {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
@@ -773,6 +786,8 @@
       }
       .sidebar.mobile-open { transform: translateX(0); }
       .hamburger { display: flex; }
+      .mobile-header { display: flex; }
+      .content { padding-top: 48px; }
       .page-header { padding: 16px 16px 0; }
       .page-body { padding: 0 16px 20px; }
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -796,6 +811,16 @@
 <!-- App -->
 <div id="app">
   <div class="layout">
+    <!-- Mobile header -->
+    <div class="mobile-header" id="mobile-header">
+      <button class="hamburger" aria-label="Menu" onclick="toggleMobileSidebar()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <span class="mobile-title">Sales Engine</span>
+    </div>
+
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">
@@ -2102,21 +2127,9 @@ async function renderCompanies() {
 
 async function loadCompanies() {
   try {
-    // No /companies API yet — aggregate from contacts
-    const data = await api('/contacts?limit=200');
-    const contacts = data.contacts || [];
-
-    // Group by company string
-    const compMap = {};
-    contacts.forEach(c => {
-      const key = c.company || '(no company)';
-      if (!compMap[key]) compMap[key] = { name: key, contacts: [], sent: 0, replied: 0 };
-      compMap[key].contacts.push(c);
-    });
-
-    const companies = Object.values(compMap)
-      .sort((a, b) => b.contacts.length - a.contacts.length)
-      .slice(0, 40);
+    const data = await api('/companies?limit=50');
+    const companies = data.companies || data || [];
+    const total = data.total || companies.length;
 
     const el = document.getElementById('companies-grid');
     if (!el) return;
@@ -2126,62 +2139,64 @@ async function loadCompanies() {
       return;
     }
 
-    el.innerHTML = companies.map(comp => {
-      const statuses = comp.contacts.map(c => c.status);
-      const replied = statuses.filter(s => ['replied','interested','signed_up','booked','converted'].includes(s)).length;
-      return `
-        <div class="company-card" onclick="showCompanyContacts(${JSON.stringify(esc(comp.name))})">
-          <div class="company-name">${esc(comp.name)}</div>
-          <div class="company-stats" style="margin-top:10px;">
-            <div class="company-stat">
-              <strong>${comp.contacts.length}</strong>
-              Contacts
-            </div>
-            <div class="company-stat">
-              <strong>${replied}</strong>
-              Engaged
-            </div>
+    el.innerHTML = companies.map(comp => `
+      <div class="company-card" onclick="showCompanyDetail('${esc(comp.id)}')">
+        <div class="company-name">${esc(comp.name)}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${esc(comp.domain || '')}</div>
+        <div class="company-stats" style="margin-top:10px;">
+          <div class="company-stat">
+            <strong>${comp.contact_count || 0}</strong>
+            Contacts
+          </div>
+          <div class="company-stat">
+            <strong>${Math.round(comp.avg_lead_score || 0)}</strong>
+            Avg Score
           </div>
         </div>
-      `;
-    }).join('');
+      </div>
+    `).join('');
+
+    // Update subtitle with total count
+    const subtitle = document.querySelector('.page-subtitle');
+    if (subtitle && subtitle.textContent.includes('pipeline')) {
+      subtitle.textContent = total + ' organizations detected';
+    }
   } catch (e) {
     console.error('Load companies failed:', e);
   }
 }
 
-async function showCompanyContacts(companyName) {
+async function showCompanyDetail(companyId) {
   try {
-    const data = await api(`/contacts?search=${encodeURIComponent(companyName)}&limit=50`);
-    const contacts = data.contacts || [];
+    const company = await api('/companies/' + companyId);
+    const contacts = company.contacts || [];
 
     openPanel(`
       <div class="panel-header" style="position:relative;">
         <button class="panel-close" onclick="closePanel()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
-        <div style="font-size:18px;font-weight:700;">${esc(companyName)}</div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">${contacts.length} contact${contacts.length !== 1 ? 's' : ''}</div>
+        <div style="font-size:18px;font-weight:700;">${esc(company.name)}</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">${esc(company.domain || '')} &middot; ${contacts.length} contacts</div>
       </div>
       <div class="panel-body">
-        ${contacts.map(c => {
-          const ini = initials(c.name, c.email);
-          const bg = avatarColor(c.email);
-          return `
-            <div class="lead-item" onclick="openContactPanel('${esc(c.id)}')" style="cursor:pointer;">
-              <div class="lead-avatar" style="background:${bg};">${ini}</div>
-              <div class="lead-info">
-                <div class="lead-name">${esc(c.name || c.email)}</div>
-                <div class="lead-company">${esc(c.email)}</div>
-              </div>
-              ${statusBadge(c.status)}
-            </div>
-          `;
-        }).join('')}
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Score</th></tr></thead>
+          <tbody>
+            ${contacts.map(c => `
+              <tr onclick="openContactDetail('${esc(c.id)}')">
+                <td>${esc(c.name || c.first_name || '—')}</td>
+                <td>${esc(c.email)}</td>
+                <td>${statusBadge(c.status)}</td>
+                <td>${scoreBadge(c.lead_score || 0)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
       </div>
     `);
   } catch (e) {
-    toast('Failed to load company', 'error');
+    console.error('Load company detail failed:', e);
   }
 }
 
