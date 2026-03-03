@@ -1,6 +1,37 @@
 import nodemailer from 'nodemailer';
+import { createId } from '@paralleldrive/cuid2';
 import { SendingAccount, Send, Contact } from '../models/index.js';
+import { logActivity } from './activity.js';
 import { Op } from 'sequelize';
+
+const BASE_URL = process.env.BASE_URL || 'https://sales.talkspresso.com';
+
+// Inject tracking pixel + wrap links + append unsubscribe footer
+function injectTracking(html: string, trackingId: string): string {
+  // Wrap all href links except mailto: and our own /t/u/ unsubscribe links
+  const wrappedLinks = html.replace(
+    /href="([^"]+)"/g,
+    (_match, url: string) => {
+      if (url.startsWith('mailto:') || url.includes('/t/u/')) {
+        return `href="${url}"`;
+      }
+      return `href="${BASE_URL}/t/c/${trackingId}?url=${encodeURIComponent(url)}"`;
+    },
+  );
+
+  // Append unsubscribe footer + tracking pixel
+  const footer = `
+<div style="margin-top:20px;padding-top:10px;border-top:1px solid #eee;font-size:11px;color:#999;">
+  <a href="${BASE_URL}/t/u/${trackingId}" style="color:#999;">Unsubscribe</a>
+</div>
+<img src="${BASE_URL}/t/o/${trackingId}" width="1" height="1" style="display:none" alt="" />`;
+
+  // Insert before </body> if present, otherwise append
+  if (wrappedLinks.includes('</body>')) {
+    return wrappedLinks.replace('</body>', `${footer}\n</body>`);
+  }
+  return wrappedLinks + footer;
+}
 
 const DELAY_BETWEEN_SENDS_MS = 5000;
 
@@ -56,6 +87,13 @@ export async function sendEmail(send: Send): Promise<boolean> {
   const contact = await Contact.findByPk(send.contact_id);
   if (!contact) return false;
 
+  // Generate tracking_id and save it before sending
+  const trackingId = createId();
+  await send.update({ tracking_id: trackingId });
+
+  // Inject tracking pixel, wrap links, append unsubscribe footer
+  const trackedHtml = injectTracking(send.body, trackingId);
+
   const transporter = getTransporter(account);
 
   try {
@@ -63,13 +101,20 @@ export async function sendEmail(send: Send): Promise<boolean> {
       from: `"${account.display_name}" <${account.email}>`,
       to: contact.email,
       subject: send.subject,
-      html: send.body,
+      html: trackedHtml,
     });
 
     await send.update({ status: 'sent', sent_at: new Date() });
     await account.update({
       daily_sent: account.daily_sent + 1,
       updated_at: new Date(),
+    });
+
+    await logActivity({
+      contactId: send.contact_id,
+      type: 'email_sent',
+      description: `Sent email: ${send.subject}`,
+      metadata: { send_id: send.id, sender_email: send.sender_email, tracking_id: trackingId },
     });
 
     console.log(`Sent to ${contact.email} via ${account.email}`);

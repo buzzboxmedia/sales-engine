@@ -12,6 +12,11 @@ import contactRoutes from './routes/contacts.js';
 import sendRoutes from './routes/sends.js';
 import sequenceRoutes from './routes/sequences.js';
 import dashboardRoutes from './routes/dashboard.js';
+import trackRoutes from './routes/track.js';
+import activityRoutes from './routes/activity.js';
+import templateRoutes from './routes/templates.js';
+import listRoutes from './routes/lists.js';
+import companyRoutes from './routes/companies.js';
 import { startScheduler } from './services/scheduler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -23,8 +28,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+      fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
+      connectSrc: ["'self'"],
+      imgSrc: ["'self'", "data:"],
     },
   },
 }));
@@ -62,6 +70,9 @@ function authMiddleware(req: express.Request, res: express.Response, next: expre
 // Static files
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
+// Public tracking routes — no auth required, must be before auth middleware
+app.use('/t', trackRoutes);
+
 // Dashboard page (served without API auth, has its own token input)
 app.get('/dashboard', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
@@ -72,6 +83,10 @@ app.use('/api/contacts', authMiddleware, contactRoutes);
 app.use('/api/sends', authMiddleware, sendRoutes);
 app.use('/api/sequences', authMiddleware, sequenceRoutes);
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+app.use('/api/activity', authMiddleware, activityRoutes);
+app.use('/api/templates', authMiddleware, templateRoutes);
+app.use('/api/lists', authMiddleware, listRoutes);
+app.use('/api/companies', authMiddleware, companyRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

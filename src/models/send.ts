@@ -18,11 +18,18 @@ interface SendAttributes {
   reply_category: string | null;
   reply_snippet: string | null;
   created_at: Date;
+  // v2 columns
+  open_count: number;
+  click_count: number;
+  first_opened_at: Date | null;
+  last_opened_at: Date | null;
+  tracking_id: string | null;
 }
 
 type SendCreationAttributes = Optional<SendAttributes,
   'id' | 'sequence_id' | 'step_number' | 'status' | 'sent_at' | 'opened_at' |
-  'replied_at' | 'bounced_at' | 'reply_category' | 'reply_snippet' | 'created_at'
+  'replied_at' | 'bounced_at' | 'reply_category' | 'reply_snippet' | 'created_at' |
+  'open_count' | 'click_count' | 'first_opened_at' | 'last_opened_at' | 'tracking_id'
 >;
 
 export class Send extends Model<SendAttributes, SendCreationAttributes> implements SendAttributes {
@@ -41,6 +48,12 @@ export class Send extends Model<SendAttributes, SendCreationAttributes> implemen
   declare reply_category: string | null;
   declare reply_snippet: string | null;
   declare created_at: Date;
+  // v2 columns
+  declare open_count: number;
+  declare click_count: number;
+  declare first_opened_at: Date | null;
+  declare last_opened_at: Date | null;
+  declare tracking_id: string | null;
 }
 
 Send.init({
@@ -59,6 +72,12 @@ Send.init({
   reply_category: { type: DataTypes.TEXT },
   reply_snippet: { type: DataTypes.TEXT },
   created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  // v2 columns
+  open_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  click_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  first_opened_at: { type: DataTypes.DATE },
+  last_opened_at: { type: DataTypes.DATE },
+  tracking_id: { type: DataTypes.TEXT },
 }, {
   sequelize,
   schema: 'sales_engine',
@@ -69,6 +88,7 @@ Send.init({
     { fields: ['sequence_id'] },
     { fields: ['status'] },
     { fields: ['sent_at'] },
+    { fields: ['tracking_id'] },
   ],
 });
 

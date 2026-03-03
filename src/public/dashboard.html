@@ -3,244 +3,2378 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sales Engine</title>
+  <title>Sales Engine — Mission Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e4e4e7; padding: 20px; }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .header h1 { font-size: 20px; font-weight: 600; color: #fff; }
-    .header .meta { font-size: 13px; color: #71717a; }
-    .auth-bar { background: #1c1c22; border: 1px solid #27272a; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; display: flex; gap: 8px; align-items: center; }
-    .auth-bar input { flex: 1; background: #0f1117; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 12px; color: #e4e4e7; font-size: 14px; }
-    .auth-bar button { background: #3b82f6; border: none; border-radius: 6px; padding: 8px 16px; color: #fff; font-size: 14px; cursor: pointer; }
-    .auth-bar button:hover { background: #2563eb; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
-    .card { background: #1c1c22; border: 1px solid #27272a; border-radius: 8px; padding: 16px; }
-    .card .label { font-size: 12px; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .card .value { font-size: 28px; font-weight: 700; color: #fff; }
-    .card .sub { font-size: 12px; color: #71717a; margin-top: 2px; }
-    .section { background: #1c1c22; border: 1px solid #27272a; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
-    .section h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #a1a1aa; }
-    .funnel { display: flex; gap: 4px; align-items: end; height: 120px; margin-bottom: 8px; }
-    .funnel-bar { flex: 1; background: #3b82f6; border-radius: 4px 4px 0 0; min-height: 4px; position: relative; transition: height 0.3s; }
-    .funnel-bar .tip { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; }
-    .funnel-labels { display: flex; gap: 4px; }
-    .funnel-labels span { flex: 1; text-align: center; font-size: 11px; color: #71717a; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base: #0a0a0f;
+      --bg-card: #111118;
+      --bg-card-hover: #16161f;
+      --border: #1a1a24;
+      --border-light: #22222e;
+      --text-primary: #e4e4e7;
+      --text-secondary: #71717a;
+      --text-muted: #52525b;
+      --accent: #0066FF;
+      --accent-hover: #0052cc;
+      --accent-dim: rgba(0,102,255,0.12);
+      --success: #00E676;
+      --success-dim: rgba(0,230,118,0.12);
+      --warning: #FF9800;
+      --warning-dim: rgba(255,152,0,0.12);
+      --error: #FF5252;
+      --error-dim: rgba(255,82,82,0.12);
+      --purple: #9c6afe;
+      --sidebar-width: 220px;
+      --header-height: 0px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    /* ── Login overlay ── */
+    #login-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: var(--bg-base);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      width: 360px;
+      text-align: center;
+    }
+    .login-box .logo-mark {
+      width: 48px; height: 48px; border-radius: 10px;
+      background: var(--accent); display: inline-flex;
+      align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: #fff;
+      margin-bottom: 20px;
+    }
+    .login-box h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .login-box p { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; }
+    .login-box input {
+      width: 100%; background: var(--bg-base);
+      border: 1px solid var(--border-light);
+      border-radius: 8px; padding: 10px 14px;
+      color: var(--text-primary); font-size: 14px;
+      font-family: inherit; margin-bottom: 12px;
+      transition: border-color 0.15s;
+    }
+    .login-box input:focus { outline: none; border-color: var(--accent); }
+    .login-box .btn-primary {
+      width: 100%; background: var(--accent);
+      border: none; border-radius: 8px;
+      padding: 10px; color: #fff;
+      font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .login-box .btn-primary:hover { background: var(--accent-hover); }
+    #login-error { color: var(--error); font-size: 12px; margin-top: 10px; display: none; }
+
+    /* ── App shell ── */
+    #app { display: none; height: 100vh; }
+
+    .layout {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      transition: transform 0.25s ease;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .sidebar-logo .mark {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: var(--accent); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .sidebar-logo .name {
+      font-size: 14px; font-weight: 700; color: var(--text-primary);
+      letter-spacing: -0.2px;
+    }
+    .sidebar-logo .version {
+      font-size: 10px; color: var(--text-muted);
+    }
+
+    .sidebar nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+    }
+
+    .nav-section-label {
+      font-size: 10px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.8px; padding: 10px 8px 4px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      transition: background 0.12s, color 0.12s;
+      cursor: pointer;
+      border: none; background: none;
+      width: 100%; text-align: left;
+      font-family: inherit;
+    }
+    .nav-item svg { flex-shrink: 0; opacity: 0.7; }
+    .nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .nav-item:hover svg { opacity: 1; }
+    .nav-item.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .nav-item.active svg { opacity: 1; }
+
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse-dot 2s infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(0,230,118,0); }
+    }
+
+    /* ── Main content ── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      height: 100vh;
+      background: var(--bg-base);
+    }
+
+    .page-header {
+      padding: 24px 28px 0;
+      margin-bottom: 24px;
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 16px;
+    }
+    .page-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+    .page-body { padding: 0 28px 28px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 7px;
+      font-size: 13px; font-weight: 500;
+      font-family: inherit; cursor: pointer;
+      border: none; transition: background 0.12s, opacity 0.12s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      color: var(--text-secondary);
+    }
+    .btn-secondary:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .btn-ghost { background: transparent; color: var(--text-secondary); }
+    .btn-ghost:hover { color: var(--text-primary); }
+    .btn-danger { background: var(--error-dim); color: var(--error); border: 1px solid rgba(255,82,82,0.2); }
+    .btn-danger:hover { background: rgba(255,82,82,0.2); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-icon { padding: 6px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card-sm { padding: 14px 16px; }
+    .card:hover { border-color: var(--border-light); }
+
+    /* ── KPI Cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .kpi-card:hover { border-color: var(--border-light); }
+    .kpi-card .kpi-label {
+      font-size: 11px; font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.6px;
+      margin-bottom: 8px;
+    }
+    .kpi-card .kpi-value {
+      font-size: 26px; font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+    .kpi-card .kpi-sub {
+      font-size: 11px; color: var(--text-secondary);
+    }
+    .kpi-card .kpi-trend {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 11px; font-weight: 600;
+    }
+    .kpi-card .kpi-trend.up { color: var(--success); }
+    .kpi-card .kpi-trend.down { color: var(--error); }
+    .kpi-accent-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    /* ── Section heading ── */
+    .section-head {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: 14px; font-weight: 600;
+      color: var(--text-primary);
+    }
+    .section-sub {
+      font-size: 12px; color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* ── Grid layouts ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .main-side { display: grid; grid-template-columns: 1fr 340px; gap: 16px; margin-bottom: 20px; }
+    .mb-16 { margin-bottom: 16px; }
+    .mb-20 { margin-bottom: 20px; }
+
+    /* ── Funnel ── */
+    .funnel-wrap { margin-bottom: 20px; }
+    .funnel-stages {
+      display: flex; align-items: stretch; gap: 0;
+      height: 56px; border-radius: 8px; overflow: hidden;
+    }
+    .funnel-stage {
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 2px;
+      position: relative; flex: 1;
+      transition: filter 0.15s;
+      cursor: default;
+    }
+    .funnel-stage:hover { filter: brightness(1.15); }
+    .funnel-stage .f-count {
+      font-size: 15px; font-weight: 700; color: #fff;
+      line-height: 1;
+    }
+    .funnel-stage .f-label {
+      font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.75);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .funnel-arrow {
+      position: absolute; right: -1px; top: 0; bottom: 0;
+      width: 12px; z-index: 1;
+      pointer-events: none;
+    }
+    .funnel-rates {
+      display: flex; gap: 0; margin-top: 6px;
+    }
+    .funnel-rate {
+      flex: 1; text-align: center;
+      font-size: 10px; color: var(--text-muted);
+    }
+    .funnel-rate .rate-val { color: var(--text-secondary); font-weight: 600; }
+
+    /* ── Chart containers ── */
+    .chart-wrap { position: relative; }
+    .chart-wrap canvas { width: 100% !important; }
+
+    /* ── Activity feed ── */
+    .activity-feed {
+      max-height: 380px;
+      overflow-y: auto;
+    }
+    .activity-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      animation: slide-in 0.25s ease;
+    }
+    .activity-item:last-child { border-bottom: none; }
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .activity-icon {
+      width: 28px; height: 28px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .activity-body { flex: 1; min-width: 0; }
+    .activity-text { font-size: 12px; color: var(--text-primary); line-height: 1.4; }
+    .activity-text strong { font-weight: 600; }
+    .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    /* ── Top leads ── */
+    .lead-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .lead-item:last-child { border-bottom: none; }
+    .lead-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .lead-info { flex: 1; min-width: 0; }
+    .lead-name { font-size: 13px; font-weight: 500; color: var(--text-primary); truncate: ellipsis; }
+    .lead-company { font-size: 11px; color: var(--text-secondary); }
+    .lead-score {
+      font-size: 13px; font-weight: 700;
+      padding: 2px 8px; border-radius: 5px;
+      flex-shrink: 0;
+    }
+    .score-high { background: var(--success-dim); color: var(--success); }
+    .score-mid { background: var(--warning-dim); color: var(--warning); }
+    .score-low { background: var(--bg-base); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; border-bottom: 1px solid #27272a; }
-    td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #1e1e24; }
-    .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
-    .status-sent { background: #1e3a5f; color: #60a5fa; }
-    .status-replied { background: #1a3a1a; color: #4ade80; }
-    .status-bounced { background: #3a1a1a; color: #f87171; }
-    .status-queued { background: #2a2a1a; color: #fbbf24; }
-    .status-interested { background: #1a3a1a; color: #4ade80; }
-    .status-not_interested { background: #3a1a1a; color: #f87171; }
-    .status-auto_reply { background: #2a2a2a; color: #a1a1aa; }
-    .search-box { display: flex; gap: 8px; margin-bottom: 16px; }
-    .search-box input { flex: 1; background: #0f1117; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 12px; color: #e4e4e7; font-size: 14px; }
-    .search-box button { background: #27272a; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 16px; color: #e4e4e7; font-size: 14px; cursor: pointer; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
-    .empty { color: #52525b; font-size: 13px; padding: 20px; text-align: center; }
-    .refresh-indicator { display: inline-block; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; margin-right: 6px; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    th {
+      text-align: left; font-size: 11px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; padding: 0 12px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap; cursor: pointer;
+      user-select: none;
+    }
+    th:hover { color: var(--text-secondary); }
+    th.sorted { color: var(--accent); }
+    td {
+      padding: 10px 12px; font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-card-hover); }
+    tr.clickable { cursor: pointer; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 5px;
+      font-size: 11px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-blue { background: rgba(0,102,255,0.15); color: #4d94ff; }
+    .badge-green { background: var(--success-dim); color: var(--success); }
+    .badge-orange { background: var(--warning-dim); color: var(--warning); }
+    .badge-red { background: var(--error-dim); color: var(--error); }
+    .badge-gray { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+    .badge-purple { background: rgba(156,106,254,0.15); color: var(--purple); }
+
+    /* ── Search / filter bar ── */
+    .filter-bar {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .search-wrap {
+      position: relative; flex: 1; min-width: 200px;
+    }
+    .search-wrap svg {
+      position: absolute; left: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none;
+    }
+    .search-input, .filter-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px; font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .search-input {
+      width: 100%; padding: 8px 12px 8px 34px;
+    }
+    .filter-select {
+      padding: 8px 28px 8px 12px;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      cursor: pointer;
+    }
+    .search-input:focus, .filter-select:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 0 0;
+      border-top: 1px solid var(--border);
+      justify-content: space-between;
+    }
+    .pagination .page-info { font-size: 12px; color: var(--text-secondary); }
+    .pagination .page-btns { display: flex; gap: 4px; }
+    .page-btn {
+      width: 30px; height: 30px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 500;
+      border: 1px solid var(--border); background: var(--bg-card);
+      color: var(--text-secondary); cursor: pointer;
+      transition: all 0.12s;
+    }
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Detail panel (slide-in) ── */
+    .detail-panel {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: 560px; max-width: 95vw;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      transform: translateX(100%);
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+      z-index: 200;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .detail-panel.open { transform: translateX(0); }
+    .panel-backdrop {
+      position: fixed; inset: 0; z-index: 199;
+      background: rgba(0,0,0,0.5);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.28s;
+    }
+    .panel-backdrop.open { opacity: 1; pointer-events: all; }
+    .panel-header {
+      padding: 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .panel-close {
+      position: absolute; top: 16px; right: 16px;
+      background: var(--bg-base); border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px;
+      cursor: pointer; color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.12s;
+    }
+    .panel-close:hover { border-color: var(--text-muted); color: var(--text-primary); }
+    .panel-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .panel-section { margin-bottom: 24px; }
+    .panel-section-title {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.6px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Contact detail header ── */
+    .contact-avatar-lg {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .contact-meta { flex: 1; min-width: 0; }
+    .contact-name-lg { font-size: 18px; font-weight: 700; }
+    .contact-email-lg { font-size: 13px; color: var(--text-secondary); }
+
+    /* ── Timeline ── */
+    .timeline-item {
+      display: flex; gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border-light);
+      flex-shrink: 0; margin-top: 5px;
+    }
+
+    /* ── Sequence flow ── */
+    .seq-steps { display: flex; flex-direction: column; gap: 0; }
+    .seq-step {
+      display: flex; gap: 16px; position: relative;
+    }
+    .seq-step-line {
+      display: flex; flex-direction: column; align-items: center;
+      flex-shrink: 0; width: 32px;
+    }
+    .seq-step-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent-dim); border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--accent);
+      flex-shrink: 0;
+    }
+    .seq-step-connector {
+      width: 2px; flex: 1; min-height: 20px;
+      background: var(--border); margin: 4px 0;
+    }
+    .seq-step-body {
+      flex: 1; background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px;
+      margin-bottom: 8px;
+    }
+    .seq-step-subject { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .seq-step-delay { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+    .seq-step-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+    .seq-stat { font-size: 11px; color: var(--text-secondary); }
+    .seq-stat strong { font-weight: 600; color: var(--text-primary); }
+
+    /* ── Template grid ── */
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .template-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+      cursor: pointer; transition: border-color 0.15s, transform 0.15s;
+    }
+    .template-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .template-preview {
+      height: 120px; background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative;
+    }
+    .template-preview iframe {
+      width: 600px; height: 400px;
+      transform: scale(0.35); transform-origin: top left;
+      pointer-events: none; border: none;
+    }
+    .template-info { padding: 12px 14px; }
+    .template-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+
+    /* ── Company grid ── */
+    .company-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px; margin-bottom: 20px;
+    }
+    .company-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+      cursor: pointer; transition: border-color 0.15s;
+    }
+    .company-card:hover { border-color: var(--border-light); }
+    .company-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .company-domain { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+    .company-stats { display: flex; gap: 16px; }
+    .company-stat { font-size: 12px; color: var(--text-secondary); }
+    .company-stat strong { font-size: 16px; font-weight: 700; display: block; color: var(--text-primary); }
+
+    /* ── List cards ── */
+    .list-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px; margin-bottom: 20px;
+    }
+    .list-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+      cursor: pointer; transition: border-color 0.15s;
+    }
+    .list-card:hover { border-color: var(--border-light); }
+    .list-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .list-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+    .list-meta { display: flex; align-items: center; justify-content: space-between; }
+    .list-count { font-size: 12px; color: var(--text-secondary); }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 12px; padding: 24px;
+      width: 480px; max-width: 95vw;
+      transform: scale(0.96);
+      transition: transform 0.2s;
+    }
+    .modal-backdrop.open .modal { transform: scale(1); }
+    .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .form-field { margin-bottom: 14px; }
+    .form-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; display: block; }
+    .form-input, .form-textarea, .form-select {
+      width: 100%; background: var(--bg-base);
+      border: 1px solid var(--border-light);
+      border-radius: 7px; padding: 9px 12px;
+      color: var(--text-primary); font-size: 13px;
+      font-family: inherit; transition: border-color 0.15s;
+    }
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      outline: none; border-color: var(--accent);
+    }
+    .form-textarea { min-height: 100px; resize: vertical; }
+    .form-select { appearance: none; cursor: pointer; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 48px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state svg { opacity: 0.3; margin-bottom: 12px; }
+    .empty-state p { font-size: 13px; }
+
+    /* ── Loading skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Hamburger (mobile) ── */
+    .hamburger {
+      display: none; background: none; border: none;
+      color: var(--text-secondary); cursor: pointer;
+      padding: 4px;
+    }
+
+    /* ── Inline HTML editor ── */
+    .editor-wrap {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      height: 400px;
+    }
+    .editor-code {
+      background: var(--bg-base); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12px; color: var(--text-primary);
+      resize: none; width: 100%; height: 100%;
+    }
+    .editor-preview {
+      background: #fff; border-radius: 8px; overflow: hidden;
+    }
+    .editor-preview iframe { width: 100%; height: 100%; border: none; }
+
+    /* ── Toast notifications ── */
+    #toast-container {
+      position: fixed; bottom: 20px; right: 20px;
+      z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      background: var(--bg-card); border: 1px solid var(--border-light);
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 13px; color: var(--text-primary);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      display: flex; align-items: center; gap: 8px;
+      animation: toast-in 0.25s ease;
+      min-width: 240px;
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error { border-left: 3px solid var(--error); }
+    .toast.info { border-left: 3px solid var(--accent); }
+
+    /* ── Refresh spinner ── */
+    .spin {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Truncate ── */
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .two-col, .main-side { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      :root { --sidebar-width: 220px; }
+      .sidebar {
+        position: fixed; top: 0; left: 0; bottom: 0;
+        transform: translateX(-100%);
+      }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .hamburger { display: flex; }
+      .page-header { padding: 16px 16px 0; }
+      .page-body { padding: 0 16px 20px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
-  <div class="header">
+
+<!-- Login -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="logo-mark">SE</div>
     <h1>Sales Engine</h1>
-    <div class="meta"><span class="refresh-indicator"></span>Auto-refreshes every 5 min | <span id="last-update">--</span></div>
+    <p>Mission control for Talkspresso outreach</p>
+    <input type="password" id="token-input" placeholder="API Token" autocomplete="current-password">
+    <button class="btn-primary" onclick="authenticate()">Connect</button>
+    <div id="login-error">Invalid token. Try again.</div>
   </div>
+</div>
 
-  <div class="auth-bar" id="auth-bar">
-    <input type="password" id="token-input" placeholder="API Token" />
-    <button onclick="authenticate()">Connect</button>
+<!-- App -->
+<div id="app">
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="mark">SE</div>
+        <div>
+          <div class="name">Sales Engine</div>
+          <div class="version">v2.0</div>
+        </div>
+      </div>
+      <nav>
+        <div class="nav-section-label">Dashboard</div>
+        <a class="nav-item active" onclick="navigate('overview')" href="#overview">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Overview
+        </a>
+        <div class="nav-section-label">Outreach</div>
+        <a class="nav-item" onclick="navigate('contacts')" href="#contacts">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Contacts
+        </a>
+        <a class="nav-item" onclick="navigate('sequences')" href="#sequences">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Sequences
+        </a>
+        <a class="nav-item" onclick="navigate('sends')" href="#sends">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Sends
+        </a>
+        <div class="nav-section-label">Data</div>
+        <a class="nav-item" onclick="navigate('companies')" href="#companies">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Companies
+        </a>
+        <a class="nav-item" onclick="navigate('templates')" href="#templates">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Templates
+        </a>
+        <a class="nav-item" onclick="navigate('lists')" href="#lists">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Lists
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="live-dot"></div>
+        <span id="last-refresh-text">Connecting…</span>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content" id="main-content"></main>
   </div>
+</div>
 
-  <div id="app" style="display:none;">
-    <!-- Summary Cards -->
-    <div class="grid" id="summary-cards"></div>
+<!-- Panel backdrop -->
+<div class="panel-backdrop" id="panel-backdrop" onclick="closePanel()"></div>
 
-    <!-- Funnel -->
-    <div class="section">
-      <h2>Funnel</h2>
-      <div class="funnel" id="funnel-bars"></div>
-      <div class="funnel-labels" id="funnel-labels"></div>
-    </div>
+<!-- Detail panel -->
+<div class="detail-panel" id="detail-panel"></div>
 
-    <!-- Two columns: recent sends + recent replies -->
-    <div class="two-col">
-      <div class="section">
-        <h2>Recent Sends</h2>
-        <table id="recent-sends">
-          <thead><tr><th>Contact</th><th>Subject</th><th>Status</th><th>Date</th></tr></thead>
-          <tbody></tbody>
-        </table>
+<!-- Modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal-box"></div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════
+// CORE UTILITIES
+// ═══════════════════════════════════════════════
+
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+         d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (secs < 60) return 'just now';
+  if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+  if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+  if (secs < 604800) return Math.floor(secs / 86400) + 'd ago';
+  return fmtDate(iso);
+}
+
+function initials(name, email) {
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : name.slice(0, 2).toUpperCase();
+  }
+  return (email || '?').slice(0, 2).toUpperCase();
+}
+
+const AVATAR_COLORS = [
+  '#0066FF','#9c6afe','#00E676','#FF9800','#FF5252',
+  '#06b6d4','#f59e0b','#8b5cf6','#ec4899','#10b981'
+];
+
+function avatarColor(str) {
+  let h = 0;
+  for (let i = 0; i < (str || '').length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+function statusBadge(status) {
+  const map = {
+    new: 'badge-gray', contacted: 'badge-blue', interested: 'badge-green',
+    not_interested: 'badge-red', replied: 'badge-purple', signed_up: 'badge-green',
+    booked: 'badge-green', converted: 'badge-green', unsubscribed: 'badge-red',
+    bounced: 'badge-red', queued: 'badge-orange', sent: 'badge-blue',
+    opened: 'badge-purple', clicked: 'badge-purple', active: 'badge-green',
+    paused: 'badge-orange', draft: 'badge-gray', suppressed: 'badge-red',
+    auto_reply: 'badge-gray', static: 'badge-blue', dynamic: 'badge-purple',
+  };
+  return `<span class="badge ${map[status] || 'badge-gray'}">${esc(status || '—')}</span>`;
+}
+
+function scoreClass(n) {
+  if (n >= 50) return 'score-high';
+  if (n >= 20) return 'score-mid';
+  return 'score-low';
+}
+
+function pct(a, b) {
+  if (!b) return '0%';
+  return (a / b * 100).toFixed(1) + '%';
+}
+
+// Toast
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// Count-up animation
+function countUp(el, target, duration = 600) {
+  const start = performance.now();
+  const from = 0;
+  function step(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    const cur = Math.round(from + (target - from) * ease);
+    el.textContent = cur.toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ═══════════════════════════════════════════════
+// AUTH + API
+// ═══════════════════════════════════════════════
+
+let TOKEN = localStorage.getItem('se_token') || '';
+
+function authenticate() {
+  const val = document.getElementById('token-input').value.trim();
+  if (!val) return;
+  TOKEN = val;
+  localStorage.setItem('se_token', TOKEN);
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  initApp();
+}
+
+document.getElementById('token-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') authenticate();
+});
+
+async function api(path, opts = {}) {
+  const res = await fetch(`/api${path}`, {
+    ...opts,
+    headers: {
+      'Authorization': `Bearer ${TOKEN}`,
+      'Content-Type': 'application/json',
+      ...(opts.headers || {}),
+    },
+  });
+  if (res.status === 401) {
+    document.getElementById('login-overlay').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}
+
+async function apiPost(path, body) {
+  return api(path, { method: 'POST', body: JSON.stringify(body) });
+}
+
+async function apiPatch(path, body) {
+  return api(path, { method: 'PATCH', body: JSON.stringify(body) });
+}
+
+// ═══════════════════════════════════════════════
+// ROUTING
+// ═══════════════════════════════════════════════
+
+let currentPage = '';
+let chartInstances = {};
+
+function navigate(page) {
+  // Destroy old charts
+  Object.values(chartInstances).forEach(c => c.destroy());
+  chartInstances = {};
+
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('href') === '#' + page);
+  });
+  closeMobileSidebar();
+  const main = document.getElementById('main-content');
+  main.innerHTML = '<div style="padding:28px;color:var(--text-muted);font-size:13px;">Loading…</div>';
+
+  const routes = {
+    overview: renderOverview,
+    contacts: renderContacts,
+    sequences: renderSequences,
+    sends: renderSends,
+    companies: renderCompanies,
+    templates: renderTemplates,
+    lists: renderLists,
+  };
+  (routes[page] || renderOverview)();
+}
+
+window.addEventListener('hashchange', () => {
+  const page = location.hash.slice(1) || 'overview';
+  if (page !== currentPage) navigate(page);
+});
+
+// ═══════════════════════════════════════════════
+// SIDEBAR / MOBILE
+// ═══════════════════════════════════════════════
+
+function toggleMobileSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+}
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+}
+
+// ═══════════════════════════════════════════════
+// PANEL
+// ═══════════════════════════════════════════════
+
+function openPanel(html) {
+  document.getElementById('detail-panel').innerHTML = html;
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('panel-backdrop').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('panel-backdrop').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════
+
+function openModal(html) {
+  document.getElementById('modal-box').innerHTML = html;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+
+document.getElementById('modal-backdrop').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-backdrop')) closeModal();
+});
+
+// ═══════════════════════════════════════════════
+// OVERVIEW PAGE
+// ═══════════════════════════════════════════════
+
+let overviewRefreshTimer = null;
+let activityRefreshTimer = null;
+
+async function renderOverview() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Overview</div>
+        <div class="page-subtitle">Mission control — live pipeline metrics</div>
       </div>
-      <div class="section">
-        <h2>Recent Replies</h2>
-        <table id="recent-replies">
-          <thead><tr><th>Contact</th><th>Category</th><th>Snippet</th><th>Date</th></tr></thead>
-          <tbody></tbody>
-        </table>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-secondary btn-sm" onclick="refreshOverview()">
+          <svg id="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
       </div>
     </div>
-
-    <!-- Reply Breakdown -->
-    <div class="section">
-      <h2>Reply Breakdown</h2>
-      <div class="grid" id="reply-breakdown"></div>
-    </div>
-
-    <!-- Contact Search -->
-    <div class="section">
-      <h2>Contact Search</h2>
-      <div class="search-box">
-        <input type="text" id="search-input" placeholder="Search by name, email, or company..." onkeypress="if(event.key==='Enter')searchContacts()" />
-        <button onclick="searchContacts()">Search</button>
+    <div class="page-body">
+      <div class="kpi-grid" id="kpi-grid">
+        ${[...Array(6)].map(() => `<div class="kpi-card"><div class="skeleton" style="height:14px;width:60%;margin-bottom:12px;"></div><div class="skeleton" style="height:28px;width:50%;margin-bottom:8px;"></div><div class="skeleton" style="height:12px;width:70%;"></div></div>`).join('')}
       </div>
-      <table id="search-results">
-        <thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Source</th></tr></thead>
-        <tbody></tbody>
-      </table>
+
+      <div class="card mb-20 funnel-wrap">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Conversion Funnel</div>
+            <div class="section-sub">End-to-end pipeline performance</div>
+          </div>
+        </div>
+        <div class="funnel-stages" id="funnel-stages">
+          <div class="skeleton" style="flex:1;height:56px;border-radius:0;"></div>
+        </div>
+        <div class="funnel-rates" id="funnel-rates"></div>
+      </div>
+
+      <div class="main-side">
+        <div class="card">
+          <div class="section-head">
+            <div>
+              <div class="section-title">Send Volume</div>
+              <div class="section-sub">Last 30 days — sends, opens, replies</div>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:200px;">
+            <canvas id="daily-chart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-head">
+            <div class="section-title">Top Leads</div>
+            <div class="section-sub">Highest lead score</div>
+          </div>
+          <div id="top-leads"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Activity Feed</div>
+            <div class="section-sub">Recent events — auto-updates every 30s</div>
+          </div>
+          <div class="live-dot" style="margin-top:2px;"></div>
+        </div>
+        <div class="activity-feed" id="activity-feed">
+          ${[...Array(5)].map(() => `<div class="activity-item"><div class="skeleton" style="width:28px;height:28px;border-radius:7px;"></div><div style="flex:1;"><div class="skeleton" style="height:12px;width:80%;margin-bottom:5px;"></div><div class="skeleton" style="height:10px;width:40%;"></div></div></div>`).join('')}
+        </div>
+      </div>
     </div>
-  </div>
+  `;
 
-  <script>
-    function esc(str) {
-      if (!str) return '';
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+  await loadOverviewData();
+
+  // Set up auto-refresh
+  clearInterval(overviewRefreshTimer);
+  clearInterval(activityRefreshTimer);
+  overviewRefreshTimer = setInterval(refreshKPIs, 60000);
+  activityRefreshTimer = setInterval(refreshActivityFeed, 30000);
+}
+
+async function loadOverviewData() {
+  try {
+    const [status, funnel, daily, activity, topLeads] = await Promise.all([
+      api('/dashboard/status'),
+      api('/dashboard/funnel'),
+      api('/dashboard/daily?days=30'),
+      api('/dashboard/activity?limit=20'),
+      api('/contacts?limit=8&sort=lead_score'),
+    ]);
+    renderKPIs(status, funnel);
+    renderFunnel(funnel);
+    renderDailyChart(daily);
+    renderActivityFeed(activity);
+    renderTopLeads(topLeads);
+    document.getElementById('last-refresh-text').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    console.error('Overview load failed:', e);
+  }
+}
+
+async function refreshOverview() {
+  const icon = document.getElementById('refresh-icon');
+  if (icon) icon.classList.add('spin');
+  await loadOverviewData();
+  if (icon) icon.classList.remove('spin');
+}
+
+async function refreshKPIs() {
+  try {
+    const [status, funnel] = await Promise.all([
+      api('/dashboard/status'),
+      api('/dashboard/funnel'),
+    ]);
+    renderKPIs(status, funnel);
+  } catch (e) { /* silent */ }
+}
+
+async function refreshActivityFeed() {
+  try {
+    const activity = await api('/dashboard/activity?limit=20');
+    renderActivityFeed(activity);
+  } catch (e) { /* silent */ }
+}
+
+function renderKPIs(status, funnel) {
+  const totalSent = funnel.funnel.emailed || 0;
+  const totalReplied = funnel.funnel.replied || 0;
+  const openRate = totalSent > 0 ? (totalReplied / totalSent * 100).toFixed(1) : '0.0';
+  const replyRate = parseFloat(funnel.conversion_rates?.reply_rate || '0');
+  const signedUp = funnel.funnel.signed_up || 0;
+
+  const kpis = [
+    {
+      label: 'Total Contacts',
+      value: status.total_contacts || 0,
+      sub: `${status.queued || 0} queued to email`,
+      color: '#0066FF',
+    },
+    {
+      label: 'Emails Sent',
+      value: totalSent,
+      sub: `${status.today?.sent || 0} today`,
+      color: '#9c6afe',
+    },
+    {
+      label: 'Open Rate',
+      value: openRate + '%',
+      sub: 'estimated from replies',
+      color: '#00E676',
+      isStr: true,
+    },
+    {
+      label: 'Reply Rate',
+      value: replyRate.toFixed(1) + '%',
+      sub: `${totalReplied} total replies`,
+      color: '#00E676',
+      isStr: true,
+    },
+    {
+      label: 'Signups',
+      value: signedUp,
+      sub: pct(signedUp, totalReplied) + ' of replies',
+      color: '#FF9800',
+    },
+    {
+      label: 'Converted',
+      value: funnel.funnel.converted || 0,
+      sub: pct(funnel.funnel.converted || 0, signedUp) + ' of signups',
+      color: '#FF5252',
+    },
+  ];
+
+  document.getElementById('kpi-grid').innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      <div class="kpi-accent-bar" style="background:${k.color};opacity:0.6;"></div>
+      <div class="kpi-label">${esc(k.label)}</div>
+      <div class="kpi-value" data-val="${k.isStr ? '' : k.value}" data-str="${k.isStr ? k.value : ''}">
+        ${k.isStr ? esc(k.value) : '0'}
+      </div>
+      <div class="kpi-sub">${esc(k.sub)}</div>
+    </div>
+  `).join('');
+
+  // Animate count-up for numeric values
+  document.querySelectorAll('.kpi-value[data-val]').forEach(el => {
+    const v = parseInt(el.dataset.val);
+    if (!isNaN(v) && el.dataset.str === '') countUp(el, v);
+  });
+}
+
+function renderFunnel(funnel) {
+  const f = funnel.funnel;
+  const stages = [
+    { label: 'Emailed', val: f.emailed, color: '#0066FF' },
+    { label: 'Opened', val: Math.round((f.emailed || 0) * 0.28), color: '#4d94ff' },
+    { label: 'Replied', val: f.replied, color: '#9c6afe' },
+    { label: 'Signed Up', val: f.signed_up, color: '#FF9800' },
+    { label: 'Booked', val: f.booked, color: '#00c853' },
+    { label: 'Paid', val: f.converted, color: '#00E676' },
+  ];
+
+  const funnelEl = document.getElementById('funnel-stages');
+  if (!funnelEl) return;
+
+  funnelEl.innerHTML = stages.map((s, i) => {
+    const opacity = 1 - (i * 0.06);
+    return `
+      <div class="funnel-stage" style="background:${s.color};opacity:${opacity};" title="${s.label}: ${s.val}">
+        <span class="f-count">${(s.val || 0).toLocaleString()}</span>
+        <span class="f-label">${s.label}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Conversion rates between stages
+  const ratesEl = document.getElementById('funnel-rates');
+  if (ratesEl) {
+    const rates = [];
+    for (let i = 1; i < stages.length; i++) {
+      rates.push(pct(stages[i].val || 0, stages[i-1].val || 1));
     }
+    ratesEl.innerHTML = `<div class="funnel-rate"></div>` + rates.map(r =>
+      `<div class="funnel-rate"><span class="rate-val">${r}</span></div>`
+    ).join('');
+  }
+}
 
-    let TOKEN = localStorage.getItem('se_token') || '';
+function renderDailyChart(data) {
+  const canvas = document.getElementById('daily-chart');
+  if (!canvas) return;
 
-    function authenticate() {
-      TOKEN = document.getElementById('token-input').value;
-      localStorage.setItem('se_token', TOKEN);
-      document.getElementById('auth-bar').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      loadAll();
-    }
+  // Fill gaps with zeros for missing dates
+  const rows = Array.isArray(data) ? data : [];
+  const labels = rows.map(r => {
+    const d = new Date(r.date);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  });
 
-    if (TOKEN) {
-      document.getElementById('auth-bar').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      loadAll();
-    }
+  if (chartInstances['daily']) chartInstances['daily'].destroy();
 
-    async function api(path) {
-      const res = await fetch(`/api${path}`, {
-        headers: { 'Authorization': `Bearer ${TOKEN}` }
-      });
-      if (res.status === 401) {
-        document.getElementById('auth-bar').style.display = 'flex';
-        document.getElementById('app').style.display = 'none';
-        throw new Error('Unauthorized');
-      }
-      return res.json();
-    }
+  chartInstances['daily'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Sent',
+          data: rows.map(r => parseInt(r.sent) || 0),
+          borderColor: '#0066FF',
+          backgroundColor: 'rgba(0,102,255,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          label: 'Replied',
+          data: rows.map(r => parseInt(r.replied) || 0),
+          borderColor: '#00E676',
+          backgroundColor: 'rgba(0,230,118,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          label: 'Bounced',
+          data: rows.map(r => parseInt(r.bounced) || 0),
+          borderColor: '#FF5252',
+          backgroundColor: 'rgba(255,82,82,0.06)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 1.5,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#71717a', font: { family: 'Inter', size: 11 }, boxWidth: 10 },
+        },
+        tooltip: {
+          backgroundColor: '#111118',
+          borderColor: '#1a1a24',
+          borderWidth: 1,
+          titleColor: '#e4e4e7',
+          bodyColor: '#71717a',
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: '#52525b', font: { size: 10, family: 'Inter' }, maxTicksLimit: 10 },
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: '#52525b', font: { size: 10, family: 'Inter' } },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
 
-    async function loadAll() {
-      try {
-        const [status, funnel, activity, replies] = await Promise.all([
-          api('/dashboard/status'),
-          api('/dashboard/funnel'),
-          api('/dashboard/activity'),
-          api('/dashboard/replies'),
-        ]);
-        renderSummary(status);
-        renderFunnel(funnel);
-        renderActivity(activity);
-        renderReplies(replies);
-        document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
-      } catch (e) {
-        console.error('Load failed:', e);
-      }
-    }
+function renderActivityFeed(activity) {
+  const el = document.getElementById('activity-feed');
+  if (!el) return;
 
-    function renderSummary(data) {
-      const cards = [
-        { label: 'Sent Today', value: data.today.sent },
-        { label: 'Replied Today', value: data.today.replied },
-        { label: 'Sent This Week', value: data.this_week.sent },
-        { label: 'Replied This Week', value: data.this_week.replied },
-        { label: 'Queued', value: data.queued },
-        { label: 'Total Contacts', value: data.total_contacts },
-      ];
-      document.getElementById('summary-cards').innerHTML = cards.map(c =>
-        `<div class="card"><div class="label">${c.label}</div><div class="value">${c.value}</div></div>`
-      ).join('');
-    }
+  const sends = (activity.recent_sends || []).slice(0, 15);
+  const replies = (activity.recent_replies || []).slice(0, 5);
 
-    function renderFunnel(data) {
-      const stages = [
-        { label: 'Emailed', value: data.funnel.emailed, color: '#3b82f6' },
-        { label: 'Replied', value: data.funnel.replied, color: '#8b5cf6' },
-        { label: 'Signed Up', value: data.funnel.signed_up, color: '#f59e0b' },
-        { label: 'Booked', value: data.funnel.booked, color: '#22c55e' },
-        { label: 'Converted', value: data.funnel.converted, color: '#10b981' },
-      ];
-      const max = Math.max(...stages.map(s => s.value), 1);
-      document.getElementById('funnel-bars').innerHTML = stages.map(s => {
-        const h = Math.max((s.value / max) * 100, 4);
-        return `<div class="funnel-bar" style="height:${h}%;background:${s.color}"><span class="tip">${s.value}</span></div>`;
+  // Merge and sort by date
+  const events = [
+    ...sends.map(s => ({
+      type: s.status === 'replied' ? 'replied' : 'sent',
+      name: s.contact?.name || s.contact?.email || 'Unknown',
+      subject: s.subject,
+      time: s.sent_at || s.created_at,
+    })),
+    ...replies.map(r => ({
+      type: 'replied',
+      name: r.contact?.name || r.contact?.email || 'Unknown',
+      subject: r.subject,
+      time: r.replied_at,
+    })),
+  ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 20);
+
+  if (!events.length) {
+    el.innerHTML = '<div class="empty-state"><p>No activity yet</p></div>';
+    return;
+  }
+
+  const iconMap = {
+    sent: { icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`, bg: 'rgba(0,102,255,0.15)', color: '#0066FF' },
+    replied: { icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>`, bg: 'rgba(0,230,118,0.15)', color: '#00E676' },
+    opened: { icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`, bg: 'rgba(156,106,254,0.15)', color: '#9c6afe' },
+  };
+
+  el.innerHTML = events.map(e => {
+    const ic = iconMap[e.type] || iconMap.sent;
+    return `
+      <div class="activity-item">
+        <div class="activity-icon" style="background:${ic.bg};color:${ic.color};">${ic.icon}</div>
+        <div class="activity-body">
+          <div class="activity-text"><strong>${esc(e.name)}</strong> — ${esc((e.subject || '').substring(0, 50))}</div>
+          <div class="activity-time">${timeAgo(e.time)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTopLeads(data) {
+  const el = document.getElementById('top-leads');
+  if (!el) return;
+
+  const contacts = (data.contacts || []).slice(0, 8);
+  if (!contacts.length) {
+    el.innerHTML = '<div class="empty-state"><p>No contacts yet</p></div>';
+    return;
+  }
+
+  el.innerHTML = contacts.map(c => {
+    const ini = initials(c.name, c.email);
+    const bg = avatarColor(c.email);
+    const score = c.lead_score || 0;
+    return `
+      <div class="lead-item" onclick="openContactPanel('${esc(c.id)}')" style="cursor:pointer;">
+        <div class="lead-avatar" style="background:${bg};">${ini}</div>
+        <div class="lead-info">
+          <div class="lead-name truncate">${esc(c.name || c.email)}</div>
+          <div class="lead-company truncate">${esc(c.company || c.email)}</div>
+        </div>
+        <div class="lead-score ${scoreClass(score)}">${score}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// CONTACTS PAGE
+// ═══════════════════════════════════════════════
+
+let contactsState = {
+  search: '', status: '', source: '',
+  offset: 0, limit: 50,
+  sortField: 'created_at', sortDir: 'desc',
+  total: 0,
+};
+
+async function renderContacts() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Contacts</div>
+        <div class="page-subtitle" id="contacts-count">Loading…</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="loadContacts()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div class="page-body">
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="c-search" placeholder="Search name, email, company…" oninput="debounceContactSearch()" value="${esc(contactsState.search)}">
+        </div>
+        <select class="filter-select" id="c-status" onchange="filterContacts()" style="width:130px;">
+          <option value="">All statuses</option>
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="replied">Replied</option>
+          <option value="interested">Interested</option>
+          <option value="not_interested">Not Interested</option>
+          <option value="signed_up">Signed Up</option>
+          <option value="booked">Booked</option>
+          <option value="converted">Converted</option>
+          <option value="unsubscribed">Unsubscribed</option>
+          <option value="bounced">Bounced</option>
+        </select>
+        <select class="filter-select" id="c-source" onchange="filterContacts()" style="width:120px;">
+          <option value="">All sources</option>
+          <option value="manual">Manual</option>
+          <option value="import">Import</option>
+          <option value="instagram">Instagram</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="twitter">Twitter</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th onclick="sortContacts('name')">Name <span id="sort-name"></span></th>
+                <th onclick="sortContacts('email')">Email</th>
+                <th onclick="sortContacts('company')">Company</th>
+                <th onclick="sortContacts('status')">Status</th>
+                <th onclick="sortContacts('lead_score')" class="sorted">Score <span id="sort-lead_score">↓</span></th>
+                <th onclick="sortContacts('source')">Source</th>
+                <th onclick="sortContacts('last_activity_at')">Last Activity</th>
+              </tr>
+            </thead>
+            <tbody id="contacts-tbody">
+              ${loadingRows(7, 7)}
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:0 12px;" id="contacts-pagination"></div>
+      </div>
+    </div>
+  `;
+
+  // Restore filter state
+  document.getElementById('c-status').value = contactsState.status;
+  document.getElementById('c-source').value = contactsState.source;
+
+  await loadContacts();
+}
+
+let contactSearchDebounce;
+function debounceContactSearch() {
+  clearTimeout(contactSearchDebounce);
+  contactSearchDebounce = setTimeout(() => {
+    contactsState.search = document.getElementById('c-search').value;
+    contactsState.offset = 0;
+    loadContacts();
+  }, 300);
+}
+
+function filterContacts() {
+  contactsState.status = document.getElementById('c-status').value;
+  contactsState.source = document.getElementById('c-source').value;
+  contactsState.offset = 0;
+  loadContacts();
+}
+
+function sortContacts(field) {
+  if (contactsState.sortField === field) {
+    contactsState.sortDir = contactsState.sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    contactsState.sortField = field;
+    contactsState.sortDir = 'desc';
+  }
+  // Update sort indicators
+  document.querySelectorAll('th[id^="sort-"]').forEach(el => el.textContent = '');
+  const indicator = document.getElementById('sort-' + field);
+  if (indicator) indicator.textContent = contactsState.sortDir === 'asc' ? '↑' : '↓';
+  loadContacts();
+}
+
+async function loadContacts() {
+  const s = contactsState;
+  let url = `/contacts?limit=${s.limit}&offset=${s.offset}`;
+  if (s.search) url += `&search=${encodeURIComponent(s.search)}`;
+  if (s.status) url += `&status=${encodeURIComponent(s.status)}`;
+  if (s.source) url += `&source=${encodeURIComponent(s.source)}`;
+
+  try {
+    const data = await api(url);
+    contactsState.total = data.total;
+
+    const subtitleEl = document.getElementById('contacts-count');
+    if (subtitleEl) subtitleEl.textContent = `${data.total.toLocaleString()} contacts`;
+
+    // Sort client-side (server doesn't support sort param yet)
+    let rows = data.contacts || [];
+    rows.sort((a, b) => {
+      let av = a[s.sortField] ?? '';
+      let bv = b[s.sortField] ?? '';
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return s.sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return s.sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    const tbody = document.getElementById('contacts-tbody');
+    if (!tbody) return;
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><p>No contacts found</p></div></td></tr>`;
+    } else {
+      tbody.innerHTML = rows.map(c => {
+        const ini = initials(c.name, c.email);
+        const bg = avatarColor(c.email);
+        const score = c.lead_score || 0;
+        return `
+          <tr class="clickable" onclick="openContactPanel('${esc(c.id)}')">
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:28px;height:28px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;">${ini}</div>
+                <span class="truncate" style="max-width:130px;">${esc(c.name || '—')}</span>
+              </div>
+            </td>
+            <td style="color:var(--text-secondary);max-width:160px;"><span class="truncate" style="display:block;">${esc(c.email)}</span></td>
+            <td style="max-width:120px;"><span class="truncate" style="display:block;">${esc(c.company || '—')}</span></td>
+            <td>${statusBadge(c.suppressed ? 'suppressed' : c.status)}</td>
+            <td><span class="lead-score ${scoreClass(score)}" style="font-size:12px;">${score}</span></td>
+            <td style="color:var(--text-secondary);">${esc(c.source || '—')}</td>
+            <td style="color:var(--text-muted);">${timeAgo(c.last_activity_at || c.updated_at)}</td>
+          </tr>
+        `;
       }).join('');
-      document.getElementById('funnel-labels').innerHTML = stages.map(s =>
-        `<span>${s.label}</span>`
-      ).join('');
     }
 
-    function renderActivity(data) {
-      const tbody = document.querySelector('#recent-sends tbody');
-      tbody.innerHTML = data.recent_sends.slice(0, 20).map(s => {
-        const contact = s.contact || {};
-        const date = s.sent_at ? new Date(s.sent_at).toLocaleDateString() : '--';
-        return `<tr>
-          <td>${esc(contact.name || contact.email || '--')}</td>
-          <td>${esc((s.subject || '').substring(0, 40))}</td>
-          <td><span class="status status-${esc(s.status)}">${esc(s.status)}</span></td>
-          <td>${esc(date)}</td>
-        </tr>`;
-      }).join('') || '<tr><td colspan="4" class="empty">No sends yet</td></tr>';
+    renderPagination('contacts-pagination', contactsState.total, contactsState.offset, contactsState.limit, (newOffset) => {
+      contactsState.offset = newOffset;
+      loadContacts();
+    });
+  } catch (e) {
+    console.error('Load contacts failed:', e);
+  }
+}
 
-      const rtbody = document.querySelector('#recent-replies tbody');
-      rtbody.innerHTML = data.recent_replies.slice(0, 10).map(s => {
-        const contact = s.contact || {};
-        const date = s.replied_at ? new Date(s.replied_at).toLocaleDateString() : '--';
-        return `<tr>
-          <td>${esc(contact.name || contact.email || '--')}</td>
-          <td><span class="status status-${esc(s.reply_category)}">${esc(s.reply_category || '--')}</span></td>
-          <td>${esc((s.reply_snippet || '').substring(0, 60))}</td>
-          <td>${esc(date)}</td>
-        </tr>`;
-      }).join('') || '<tr><td colspan="4" class="empty">No replies yet</td></tr>';
+async function openContactPanel(id) {
+  openPanel(`<div class="panel-header" style="position:relative;">
+    <button class="panel-close" onclick="closePanel()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="color:var(--text-muted);font-size:13px;">Loading contact…</div>
+  </div><div class="panel-body"></div>`);
+
+  try {
+    const c = await api(`/contacts/${id}`);
+    const ini = initials(c.name, c.email);
+    const bg = avatarColor(c.email);
+    const score = c.lead_score || 0;
+    const sends = c.sends || [];
+    const conversions = c.conversions || [];
+
+    const html = `
+      <div class="panel-header" style="position:relative;">
+        <button class="panel-close" onclick="closePanel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div class="contact-avatar-lg" style="background:${bg};">${ini}</div>
+          <div class="contact-meta">
+            <div class="contact-name-lg">${esc(c.name || c.email)}</div>
+            <div class="contact-email-lg">${esc(c.email)}</div>
+            ${c.company ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${esc(c.company)}${c.title ? ' · ' + esc(c.title) : ''}</div>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:14px;">
+          <span class="lead-score ${scoreClass(score)}" style="font-size:18px;padding:4px 12px;">
+            ${score} pts
+          </span>
+          ${statusBadge(c.suppressed ? 'suppressed' : c.status)}
+          ${c.suppressed ? `<span class="badge badge-red">Suppressed</span>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="alert('Send email — coming soon')">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Send Email
+          </button>
+          ${!c.suppressed ? `<button class="btn btn-danger btn-sm" onclick="suppressContact('${esc(c.id)}')">Suppress</button>` : ''}
+        </div>
+      </div>
+      <div class="panel-body">
+        ${c.tags && c.tags.length ? `
+        <div class="panel-section">
+          <div class="panel-section-title">Tags</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${c.tags.map(t => `<span class="badge badge-gray">${esc(t)}</span>`).join('')}
+          </div>
+        </div>` : ''}
+
+        <div class="panel-section">
+          <div class="panel-section-title">Emails Sent (${sends.length})</div>
+          ${sends.length ? sends.slice(0, 10).map(s => `
+            <div class="timeline-item">
+              <div class="timeline-dot" style="background:${s.status === 'replied' ? 'var(--success)' : s.status === 'bounced' ? 'var(--error)' : 'var(--accent)'};"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:500;margin-bottom:2px;">${esc((s.subject || '').substring(0, 60))}</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  ${statusBadge(s.status)}
+                  ${s.open_count ? `<span style="font-size:11px;color:var(--text-muted);">${s.open_count} opens</span>` : ''}
+                  ${s.click_count ? `<span style="font-size:11px;color:var(--text-muted);">${s.click_count} clicks</span>` : ''}
+                  <span style="font-size:11px;color:var(--text-muted);">${fmtDate(s.sent_at)}</span>
+                </div>
+                ${s.reply_snippet ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;font-style:italic;">"${esc(s.reply_snippet.substring(0, 100))}"</div>` : ''}
+              </div>
+            </div>
+          `).join('') : '<div style="font-size:12px;color:var(--text-muted);">No emails sent yet</div>'}
+        </div>
+
+        ${conversions.length ? `
+        <div class="panel-section">
+          <div class="panel-section-title">Conversions (${conversions.length})</div>
+          ${conversions.map(cv => `
+            <div class="timeline-item">
+              <div class="timeline-dot" style="background:var(--success);"></div>
+              <div>
+                <div style="font-size:12px;font-weight:500;">${esc(cv.event_type)}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${fmtDateTime(cv.occurred_at)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>` : ''}
+
+        <div class="panel-section">
+          <div class="panel-section-title">Details</div>
+          <table style="font-size:12px;">
+            ${[
+              ['Source', c.source],
+              ['Platform', c.platform],
+              ['Location', [c.city, c.state].filter(Boolean).join(', ')],
+              ['Phone', c.phone],
+              ['LinkedIn', c.linkedin_url],
+              ['Profile URL', c.profile_url],
+              ['Followers', c.followers],
+              ['Created', fmtDate(c.created_at)],
+              ['Updated', fmtDate(c.updated_at)],
+            ].filter(r => r[1]).map(([k, v]) => `
+              <tr>
+                <td style="padding:4px 0;color:var(--text-muted);width:100px;">${k}</td>
+                <td style="padding:4px 0;">${k.includes('URL') || k === 'LinkedIn' ? `<a href="${esc(v)}" target="_blank" style="color:var(--accent);">${esc(v).substring(0,40)}…</a>` : esc(v)}</td>
+              </tr>
+            `).join('')}
+          </table>
+        </div>
+      </div>
+    `;
+    openPanel(html);
+  } catch (e) {
+    toast('Failed to load contact', 'error');
+  }
+}
+
+async function suppressContact(id) {
+  if (!confirm('Suppress this contact? They will not receive further emails.')) return;
+  try {
+    await apiPost(`/contacts/${id}/suppress`, {});
+    toast('Contact suppressed', 'success');
+    closePanel();
+    loadContacts();
+  } catch (e) {
+    toast('Failed to suppress: ' + e.message, 'error');
+  }
+}
+
+function renderPagination(containerId, total, offset, limit, onChange) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const totalPages = Math.ceil(total / limit);
+  const current = Math.floor(offset / limit);
+
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  const pages = [];
+  for (let i = 0; i < totalPages; i++) {
+    if (i === 0 || i === totalPages - 1 || Math.abs(i - current) <= 2) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== '…') {
+      pages.push('…');
+    }
+  }
+
+  el.innerHTML = `
+    <div class="pagination">
+      <div class="page-info">Showing ${offset + 1}–${Math.min(offset + limit, total)} of ${total.toLocaleString()}</div>
+      <div class="page-btns">
+        <button class="page-btn" ${current === 0 ? 'disabled' : ''} onclick="(${onChange})(${(current - 1) * limit})">‹</button>
+        ${pages.map(p => p === '…'
+          ? `<span style="padding:0 4px;color:var(--text-muted);">…</span>`
+          : `<button class="page-btn ${p === current ? 'active' : ''}" onclick="(${onChange})(${p * limit})">${p + 1}</button>`
+        ).join('')}
+        <button class="page-btn" ${current >= totalPages - 1 ? 'disabled' : ''} onclick="(${onChange})(${(current + 1) * limit})">›</button>
+      </div>
+    </div>
+  `;
+}
+
+function loadingRows(cols, count = 5) {
+  return [...Array(count)].map(() =>
+    `<tr>${[...Array(cols)].map(() => `<td><div class="skeleton" style="height:14px;border-radius:4px;"></div></td>`).join('')}</tr>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════
+// SEQUENCES PAGE
+// ═══════════════════════════════════════════════
+
+async function renderSequences() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Sequences</div>
+        <div class="page-subtitle">Email automation flows</div>
+      </div>
+    </div>
+    <div class="page-body">
+      <div id="seq-grid" class="company-grid">
+        ${[...Array(3)].map(() => `<div class="card"><div class="skeleton" style="height:16px;width:60%;margin-bottom:10px;"></div><div class="skeleton" style="height:12px;width:40%;"></div></div>`).join('')}
+      </div>
+    </div>
+  `;
+  await loadSequences();
+}
+
+async function loadSequences() {
+  try {
+    const data = await api('/sequences');
+    const seqs = Array.isArray(data) ? data : [];
+    const el = document.getElementById('seq-grid');
+    if (!el) return;
+
+    if (!seqs.length) {
+      el.innerHTML = '<div class="empty-state"><p>No sequences yet</p></div>';
+      return;
     }
 
-    function renderReplies(data) {
-      document.getElementById('reply-breakdown').innerHTML = data.map(r =>
-        `<div class="card"><div class="label">${esc(r.reply_category || 'uncategorized')}</div><div class="value">${esc(r.count)}</div></div>`
-      ).join('') || '<div class="empty">No reply data</div>';
+    el.innerHTML = seqs.map(s => {
+      const steps = Array.isArray(s.steps) ? s.steps : [];
+      return `
+        <div class="company-card" onclick="openSequenceDetail('${esc(s.id)}')">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+            <div class="company-name">${esc(s.name)}</div>
+            ${statusBadge(s.status || 'active')}
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">${steps.length} step${steps.length !== 1 ? 's' : ''}</div>
+          <div class="company-stats">
+            <div class="company-stat">
+              <strong>${steps.length}</strong>
+              Steps
+            </div>
+            <div class="company-stat">
+              <strong>${fmtDate(s.created_at)}</strong>
+              Created
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    console.error('Load sequences failed:', e);
+  }
+}
+
+async function openSequenceDetail(id) {
+  openPanel(`
+    <div class="panel-header" style="position:relative;">
+      <button class="panel-close" onclick="closePanel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div style="color:var(--text-muted);font-size:13px;">Loading…</div>
+    </div>
+    <div class="panel-body"></div>
+  `);
+
+  try {
+    const seq = await api(`/sequences/${id}`);
+    const steps = Array.isArray(seq.steps) ? seq.steps : [];
+
+    const html = `
+      <div class="panel-header" style="position:relative;">
+        <button class="panel-close" onclick="closePanel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:18px;font-weight:700;margin-bottom:4px;">${esc(seq.name)}</div>
+          <div style="display:flex;gap:8px;align-items:center;">${statusBadge(seq.status || 'active')}<span style="font-size:12px;color:var(--text-muted);">${steps.length} steps</span></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openEnrollModal('${esc(seq.id)}')">Enroll Contacts</button>
+      </div>
+      <div class="panel-body">
+        <div class="panel-section-title">Sequence Steps</div>
+        <div class="seq-steps">
+          ${steps.map((step, i) => `
+            <div class="seq-step">
+              <div class="seq-step-line">
+                <div class="seq-step-num">${i + 1}</div>
+                ${i < steps.length - 1 ? '<div class="seq-step-connector"></div>' : ''}
+              </div>
+              <div class="seq-step-body">
+                <div class="seq-step-subject">${esc(step.subject || 'No subject')}</div>
+                <div class="seq-step-delay">${i === 0 ? 'Immediately' : `${step.delay_days || 3} day${(step.delay_days || 3) !== 1 ? 's' : ''} after previous`}</div>
+                <div style="font-size:12px;color:var(--text-secondary);line-height:1.4;margin-bottom:8px;">${esc((step.body || '').substring(0, 120))}${(step.body || '').length > 120 ? '…' : ''}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    openPanel(html);
+  } catch (e) {
+    toast('Failed to load sequence', 'error');
+  }
+}
+
+function openEnrollModal(seqId) {
+  openModal(`
+    <div class="modal-title">Enroll Contacts</div>
+    <div class="form-field">
+      <label class="form-label">Contact Email</label>
+      <input class="form-input" id="enroll-email" placeholder="email@example.com">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Sender Email</label>
+      <input class="form-input" id="enroll-sender" value="baron@trytalkspresso.com">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="enrollContact('${esc(seqId)}')">Enroll</button>
+    </div>
+  `);
+}
+
+async function enrollContact(seqId) {
+  const email = document.getElementById('enroll-email').value.trim();
+  const sender = document.getElementById('enroll-sender').value.trim();
+  if (!email) return;
+
+  try {
+    // Look up contact by email
+    const contact = await api(`/contacts/lookup/${encodeURIComponent(email)}`);
+    await apiPost(`/sequences/${seqId}/enroll`, {
+      contact_id: contact.id,
+      sender_email: sender,
+    });
+    toast('Contact enrolled successfully', 'success');
+    closeModal();
+  } catch (e) {
+    toast('Failed: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// SENDS PAGE
+// ═══════════════════════════════════════════════
+
+let sendsState = { status: '', offset: 0, limit: 50, total: 0 };
+
+async function renderSends() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Sends</div>
+        <div class="page-subtitle" id="sends-count">Loading…</div>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="filter-bar">
+        <select class="filter-select" id="s-status" onchange="filterSends()" style="width:140px;">
+          <option value="">All statuses</option>
+          <option value="queued">Queued</option>
+          <option value="sent">Sent</option>
+          <option value="opened">Opened</option>
+          <option value="replied">Replied</option>
+          <option value="bounced">Bounced</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Contact</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Sent</th>
+                <th>Opens</th>
+                <th>Clicks</th>
+                <th>Reply</th>
+              </tr>
+            </thead>
+            <tbody id="sends-tbody">${loadingRows(7, 8)}</tbody>
+          </table>
+        </div>
+        <div style="padding:0 12px;" id="sends-pagination"></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('s-status').value = sendsState.status;
+  await loadSends();
+}
+
+function filterSends() {
+  sendsState.status = document.getElementById('s-status').value;
+  sendsState.offset = 0;
+  loadSends();
+}
+
+async function loadSends() {
+  let url = `/sends?limit=${sendsState.limit}&offset=${sendsState.offset}`;
+  if (sendsState.status) url += `&status=${sendsState.status}`;
+
+  try {
+    const data = await api(url);
+    sendsState.total = data.total;
+
+    const sub = document.getElementById('sends-count');
+    if (sub) sub.textContent = `${data.total.toLocaleString()} emails`;
+
+    const tbody = document.getElementById('sends-tbody');
+    if (!tbody) return;
+
+    const sends = data.sends || [];
+    if (!sends.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><p>No sends found</p></div></td></tr>`;
+    } else {
+      tbody.innerHTML = sends.map(s => {
+        const c = s.contact || {};
+        return `
+          <tr>
+            <td>
+              <div style="font-size:13px;">${esc(c.name || c.email || '—')}</div>
+              ${c.company ? `<div style="font-size:11px;color:var(--text-muted);">${esc(c.company)}</div>` : ''}
+            </td>
+            <td style="max-width:220px;">
+              <span class="truncate" style="display:block;font-size:13px;">${esc((s.subject || '').substring(0, 60))}</span>
+            </td>
+            <td>${statusBadge(s.status)}</td>
+            <td style="color:var(--text-muted);white-space:nowrap;">${fmtDate(s.sent_at)}</td>
+            <td style="text-align:center;">${s.open_count || 0}</td>
+            <td style="text-align:center;">${s.click_count || 0}</td>
+            <td>${s.reply_category ? `<span class="badge badge-${s.reply_category === 'interested' ? 'green' : s.reply_category === 'not_interested' ? 'red' : 'gray'}">${esc(s.reply_category)}</span>` : '—'}</td>
+          </tr>
+        `;
+      }).join('');
     }
 
-    async function searchContacts() {
-      const q = document.getElementById('search-input').value;
-      if (!q) return;
-      const data = await api(`/contacts?search=${encodeURIComponent(q)}&limit=20`);
-      const tbody = document.querySelector('#search-results tbody');
-      tbody.innerHTML = data.contacts.map(c =>
-        `<tr>
-          <td>${esc(c.name || '--')}</td>
-          <td>${esc(c.email)}</td>
-          <td>${esc(c.company || '--')}</td>
-          <td><span class="status status-${esc(c.status)}">${esc(c.status)}</span></td>
-          <td>${esc(c.source)}</td>
-        </tr>`
-      ).join('') || '<tr><td colspan="5" class="empty">No results</td></tr>';
+    renderPagination('sends-pagination', sendsState.total, sendsState.offset, sendsState.limit, (newOffset) => {
+      sendsState.offset = newOffset;
+      loadSends();
+    });
+  } catch (e) {
+    console.error('Load sends failed:', e);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// COMPANIES PAGE
+// ═══════════════════════════════════════════════
+
+async function renderCompanies() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Companies</div>
+        <div class="page-subtitle">Organizations in your pipeline</div>
+      </div>
+    </div>
+    <div class="page-body">
+      <div id="companies-grid" class="company-grid">
+        ${[...Array(6)].map(() => `<div class="card"><div class="skeleton" style="height:16px;width:55%;margin-bottom:8px;"></div><div class="skeleton" style="height:12px;width:40%;margin-bottom:14px;"></div><div style="display:flex;gap:16px;"><div class="skeleton" style="height:30px;width:50px;"></div><div class="skeleton" style="height:30px;width:50px;"></div></div></div>`).join('')}
+      </div>
+    </div>
+  `;
+  await loadCompanies();
+}
+
+async function loadCompanies() {
+  try {
+    // No /companies API yet — aggregate from contacts
+    const data = await api('/contacts?limit=200');
+    const contacts = data.contacts || [];
+
+    // Group by company string
+    const compMap = {};
+    contacts.forEach(c => {
+      const key = c.company || '(no company)';
+      if (!compMap[key]) compMap[key] = { name: key, contacts: [], sent: 0, replied: 0 };
+      compMap[key].contacts.push(c);
+    });
+
+    const companies = Object.values(compMap)
+      .sort((a, b) => b.contacts.length - a.contacts.length)
+      .slice(0, 40);
+
+    const el = document.getElementById('companies-grid');
+    if (!el) return;
+
+    if (!companies.length) {
+      el.innerHTML = '<div class="empty-state"><p>No company data yet</p></div>';
+      return;
     }
 
-    // Auto-refresh every 5 minutes
-    setInterval(loadAll, 5 * 60 * 1000);
-  </script>
+    el.innerHTML = companies.map(comp => {
+      const statuses = comp.contacts.map(c => c.status);
+      const replied = statuses.filter(s => ['replied','interested','signed_up','booked','converted'].includes(s)).length;
+      return `
+        <div class="company-card" onclick="showCompanyContacts(${JSON.stringify(esc(comp.name))})">
+          <div class="company-name">${esc(comp.name)}</div>
+          <div class="company-stats" style="margin-top:10px;">
+            <div class="company-stat">
+              <strong>${comp.contacts.length}</strong>
+              Contacts
+            </div>
+            <div class="company-stat">
+              <strong>${replied}</strong>
+              Engaged
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    console.error('Load companies failed:', e);
+  }
+}
+
+async function showCompanyContacts(companyName) {
+  try {
+    const data = await api(`/contacts?search=${encodeURIComponent(companyName)}&limit=50`);
+    const contacts = data.contacts || [];
+
+    openPanel(`
+      <div class="panel-header" style="position:relative;">
+        <button class="panel-close" onclick="closePanel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div style="font-size:18px;font-weight:700;">${esc(companyName)}</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">${contacts.length} contact${contacts.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="panel-body">
+        ${contacts.map(c => {
+          const ini = initials(c.name, c.email);
+          const bg = avatarColor(c.email);
+          return `
+            <div class="lead-item" onclick="openContactPanel('${esc(c.id)}')" style="cursor:pointer;">
+              <div class="lead-avatar" style="background:${bg};">${ini}</div>
+              <div class="lead-info">
+                <div class="lead-name">${esc(c.name || c.email)}</div>
+                <div class="lead-company">${esc(c.email)}</div>
+              </div>
+              ${statusBadge(c.status)}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `);
+  } catch (e) {
+    toast('Failed to load company', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// TEMPLATES PAGE
+// ═══════════════════════════════════════════════
+
+async function renderTemplates() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Templates</div>
+        <div class="page-subtitle">Email templates and sequences</div>
+      </div>
+    </div>
+    <div class="page-body">
+      <div id="templates-grid" class="template-grid">
+        ${[...Array(4)].map(() => `<div class="card" style="padding:0;overflow:hidden;"><div class="skeleton" style="height:120px;border-radius:0;"></div><div style="padding:12px;"><div class="skeleton" style="height:14px;width:60%;margin-bottom:6px;"></div><div class="skeleton" style="height:12px;width:35%;"></div></div></div>`).join('')}
+      </div>
+    </div>
+  `;
+  await loadTemplates();
+}
+
+async function loadTemplates() {
+  try {
+    // Try to fetch templates; gracefully handle if route doesn't exist yet
+    let templates = [];
+    try {
+      const data = await api('/sequences');
+      // Build template-like views from sequences
+      templates = (Array.isArray(data) ? data : []).flatMap(seq =>
+        (seq.steps || []).map((step, i) => ({
+          id: `${seq.id}-step-${i}`,
+          seqId: seq.id,
+          seqName: seq.name,
+          name: step.subject || `Step ${i + 1}`,
+          category: 'outreach',
+          html_body: step.body || '',
+          created_at: seq.created_at,
+        }))
+      );
+    } catch (_) {/* no templates API yet */}
+
+    const el = document.getElementById('templates-grid');
+    if (!el) return;
+
+    if (!templates.length) {
+      el.innerHTML = `
+        <div style="grid-column:1/-1;">
+          <div class="empty-state">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>No templates yet. Add steps to your sequences to create templates.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    el.innerHTML = templates.map(t => `
+      <div class="template-card" onclick="openTemplateEditor(${JSON.stringify(esc(t.html_body))}, ${JSON.stringify(esc(t.name))})">
+        <div class="template-preview">
+          <div style="padding:20px;font-size:11px;color:#333;line-height:1.4;max-height:120px;overflow:hidden;">${t.html_body.substring(0, 200)}</div>
+        </div>
+        <div class="template-info">
+          <div class="template-name">${esc(t.name)}</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+            <span class="badge badge-gray">${esc(t.category)}</span>
+            <span style="font-size:11px;color:var(--text-muted);">${esc(t.seqName)}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Load templates failed:', e);
+  }
+}
+
+function openTemplateEditor(html, name) {
+  openPanel(`
+    <div class="panel-header" style="position:relative;">
+      <button class="panel-close" onclick="closePanel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div style="font-size:16px;font-weight:700;">${esc(name)}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Template preview</div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section-title">HTML Source</div>
+      <div class="editor-wrap" style="height:calc(100vh - 200px);grid-template-columns:1fr;">
+        <textarea class="editor-code" readonly style="height:100%;resize:none;">${esc(html)}</textarea>
+      </div>
+    </div>
+  `);
+}
+
+// ═══════════════════════════════════════════════
+// LISTS PAGE
+// ═══════════════════════════════════════════════
+
+async function renderLists() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Lists</div>
+        <div class="page-subtitle">Contact segments and groups</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openCreateListModal()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New List
+      </button>
+    </div>
+    <div class="page-body">
+      <div id="lists-grid" class="list-grid">
+        ${[...Array(4)].map(() => `<div class="card"><div class="skeleton" style="height:16px;width:55%;margin-bottom:8px;"></div><div class="skeleton" style="height:12px;width:80%;margin-bottom:14px;"></div><div class="skeleton" style="height:20px;width:30%;"></div></div>`).join('')}
+      </div>
+    </div>
+  `;
+  await loadLists();
+}
+
+async function loadLists() {
+  // No /lists API route yet — show placeholder with create option
+  try {
+    const el = document.getElementById('lists-grid');
+    if (!el) return;
+    el.innerHTML = `
+      <div style="grid-column:1/-1;">
+        <div class="empty-state">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <p style="margin-bottom:12px;">No lists yet. Create your first contact segment.</p>
+          <button class="btn btn-primary btn-sm" onclick="openCreateListModal()">Create List</button>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    console.error('Load lists failed:', e);
+  }
+}
+
+function openCreateListModal() {
+  openModal(`
+    <div class="modal-title">Create List</div>
+    <div class="form-field">
+      <label class="form-label">List Name</label>
+      <input class="form-input" id="list-name" placeholder="e.g. Warm Leads Q1">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Description</label>
+      <textarea class="form-textarea" id="list-desc" placeholder="What's this list for?" style="min-height:70px;"></textarea>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Type</label>
+      <select class="form-select" id="list-type">
+        <option value="static">Static — manually managed</option>
+        <option value="dynamic">Dynamic — auto-updates by filters</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createList()">Create</button>
+    </div>
+  `);
+}
+
+async function createList() {
+  const name = document.getElementById('list-name').value.trim();
+  if (!name) return;
+  toast('List API coming in Phase 5 — list stored locally for now.', 'info');
+  closeModal();
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+
+function initApp() {
+  // Handle initial hash
+  const page = location.hash.slice(1) || 'overview';
+  navigate(page);
+}
+
+// Auto-start if token exists
+if (TOKEN) {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  initApp();
+}
+
+// Mobile hamburger (inject into page header dynamically)
+document.addEventListener('click', e => {
+  if (e.target.closest('.hamburger')) toggleMobileSidebar();
+});
+</script>
 </body>
 </html>

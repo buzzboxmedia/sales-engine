@@ -23,12 +23,23 @@ interface ContactAttributes {
   metadata: object | null;
   created_at: Date;
   updated_at: Date;
+  // v2 columns
+  company_id: string | null;
+  lead_score: number;
+  last_activity_at: Date | null;
+  linkedin_url: string | null;
+  phone: string | null;
+  city: string | null;
+  state: string | null;
+  avatar_url: string | null;
 }
 
 type ContactCreationAttributes = Optional<ContactAttributes,
   'id' | 'project' | 'name' | 'first_name' | 'company' | 'title' | 'platform' |
   'niche' | 'profile_url' | 'followers' | 'source' | 'status' | 'talkspresso_user_id' |
-  'suppressed' | 'tags' | 'notes' | 'metadata' | 'created_at' | 'updated_at'
+  'suppressed' | 'tags' | 'notes' | 'metadata' | 'created_at' | 'updated_at' |
+  'company_id' | 'lead_score' | 'last_activity_at' | 'linkedin_url' | 'phone' |
+  'city' | 'state' | 'avatar_url'
 >;
 
 export class Contact extends Model<ContactAttributes, ContactCreationAttributes> implements ContactAttributes {
@@ -52,6 +63,15 @@ export class Contact extends Model<ContactAttributes, ContactCreationAttributes>
   declare metadata: object | null;
   declare created_at: Date;
   declare updated_at: Date;
+  // v2 columns
+  declare company_id: string | null;
+  declare lead_score: number;
+  declare last_activity_at: Date | null;
+  declare linkedin_url: string | null;
+  declare phone: string | null;
+  declare city: string | null;
+  declare state: string | null;
+  declare avatar_url: string | null;
 }
 
 Contact.init({
@@ -75,6 +95,15 @@ Contact.init({
   metadata: { type: DataTypes.JSONB },
   created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
   updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  // v2 columns
+  company_id: { type: DataTypes.TEXT, references: { model: { tableName: 'companies', schema: 'sales_engine' }, key: 'id' } },
+  lead_score: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  last_activity_at: { type: DataTypes.DATE },
+  linkedin_url: { type: DataTypes.TEXT },
+  phone: { type: DataTypes.TEXT },
+  city: { type: DataTypes.TEXT },
+  state: { type: DataTypes.TEXT },
+  avatar_url: { type: DataTypes.TEXT },
 }, {
   sequelize,
   schema: 'sales_engine',
@@ -85,6 +114,9 @@ Contact.init({
     { fields: ['status'] },
     { fields: ['project'] },
     { fields: ['talkspresso_user_id'] },
+    { fields: ['company_id'] },
+    { fields: ['lead_score'] },
+    { fields: ['last_activity_at'] },
   ],
 });
 
