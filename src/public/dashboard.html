@@ -2324,7 +2324,7 @@ async function openSendPanel(id) {
           ${s.first_opened_at ? '<div style="font-size:11px;color:var(--text-muted);"><span style="text-transform:uppercase;letter-spacing:0.5px;">First Opened</span><br><span style="color:var(--text-secondary);">' + new Date(s.first_opened_at).toLocaleString() + '</span></div>' : ''}
           ${s.replied_at ? '<div style="font-size:11px;color:var(--text-muted);"><span style="text-transform:uppercase;letter-spacing:0.5px;">Replied</span><br><span style="color:var(--text-secondary);">' + new Date(s.replied_at).toLocaleString() + '</span></div>' : ''}
         </div>
-        ${c.id ? '<div style="margin-top:16px;"><button class="btn btn-secondary btn-sm" onclick="openContactPanel(\\'' + esc(c.id) + '\\')">View Contact</button></div>' : ''}
+        ${c.id ? '<div style="margin-top:16px;"><button class="btn btn-secondary btn-sm" onclick="openContactPanel(\x27' + esc(c.id) + '\x27)">View Contact</button></div>' : ''}
       </div>
     `);
   } catch (e) {
