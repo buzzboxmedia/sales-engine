@@ -6,7 +6,7 @@ import { Send, Contact, Sequence, SendingAccount } from '../models/index.js';
 
 // Domain warmup schedule: [day_threshold, daily_limit]
 // Domain age starts from WARMUP_START_DATE. Ramps conservatively to protect reputation.
-const WARMUP_START_DATE = new Date('2026-03-03');
+const WARMUP_START_DATE = new Date('2026-03-06');
 const WARMUP_SCHEDULE: [number, number][] = [
   [0, 15],    // Days 0-6:   15/day
   [7, 30],    // Days 7-13:  30/day
