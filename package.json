@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp -r src/public dist/public",
     "start": "node dist/index.js",
     "migrate": "tsx src/migrations/001-init.ts",
     "import": "tsx src/services/importer.ts",
