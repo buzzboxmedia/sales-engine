@@ -242,17 +242,29 @@ router.get('/schedule', async (req: Request, res: Response) => {
   }
 
   // --- 3. Group everything by date ---
+  // Spread queued sends across days based on warmup daily limit
+  const WARMUP_START_DATE = new Date('2026-03-06');
+  const WARMUP_SCHEDULE: [number, number][] = [
+    [0, 15], [7, 30], [14, 50], [21, 75], [28, 100], [42, 150], [56, 200],
+  ];
 
+  function getDailyLimit(date: Date): number {
+    const daysSinceStart = Math.floor((date.getTime() - WARMUP_START_DATE.getTime()) / (1000 * 60 * 60 * 24));
+    let limit = WARMUP_SCHEDULE[0][1];
+    for (const [threshold, l] of WARMUP_SCHEDULE) {
+      if (daysSinceStart >= threshold) limit = l;
+    }
+    return limit;
+  }
+
+  // Distribute queued sends across future days respecting daily limits
+  const queuedItems: ScheduleSend[] = [];
   for (const send of queuedSends) {
     const contact = (send as any).contact;
     const sequence = (send as any).sequence;
     if (!contact) continue;
-
-    // Queued sends go on today (they fire as soon as processed)
-    const dateKey = today.toISOString().slice(0, 10);
-    if (!dayMap.has(dateKey)) dayMap.set(dateKey, []);
-    dayMap.get(dateKey)!.push({
-      date: dateKey,
+    queuedItems.push({
+      date: '', // will be assigned below
       contact_name: contact.name || contact.email,
       contact_email: contact.email,
       sequence_name: sequence?.name || null,
@@ -260,6 +272,23 @@ router.get('/schedule', async (req: Request, res: Response) => {
       subject: send.subject,
       status: 'queued',
     });
+  }
+
+  let queueIdx = 0;
+  const cursor = new Date(today);
+  while (queueIdx < queuedItems.length && cursor < rangeEnd) {
+    const dateKey = cursor.toISOString().slice(0, 10);
+    const dailyLimit = getDailyLimit(cursor);
+    const existing = dayMap.get(dateKey)?.length || 0;
+    const slotsLeft = Math.max(0, dailyLimit - existing);
+    const batch = queuedItems.slice(queueIdx, queueIdx + slotsLeft);
+    for (const item of batch) {
+      item.date = dateKey;
+      if (!dayMap.has(dateKey)) dayMap.set(dateKey, []);
+      dayMap.get(dateKey)!.push(item);
+    }
+    queueIdx += batch.length;
+    cursor.setDate(cursor.getDate() + 1);
   }
 
   for (const item of projected) {
